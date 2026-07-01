@@ -148,6 +148,12 @@ function initTabNavigation() {
       navItems.forEach(n => n.classList.remove('active'));
       item.classList.add('active');
 
+      // Update Mobile Nav active indicator
+      const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
+      mobileNavItems.forEach(m => m.classList.remove('active'));
+      const activeMobileItem = document.querySelector(`.mobile-nav-item[data-tab="${tab}"]`);
+      if (activeMobileItem) activeMobileItem.classList.add('active');
+
       // Update active panel
       panels.forEach(p => p.classList.remove('active'));
       document.getElementById(`tab-${tab}`).classList.add('active');
@@ -159,6 +165,18 @@ function initTabNavigation() {
       // Refresh layout-specific actions
       if (tab === 'analytics') {
         renderAnalyticsTrend('month');
+      }
+    });
+  });
+
+  // Bind Mobile Bottom Nav Clicks
+  const mobileNavButtons = document.querySelectorAll('.mobile-nav-item');
+  mobileNavButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.getAttribute('data-tab');
+      const matchingDesktopBtn = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+      if (matchingDesktopBtn) {
+        matchingDesktopBtn.click();
       }
     });
   });
@@ -930,6 +948,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. Initialize Tabs & Theme Settings
   initTabNavigation();
   initThemeToggle();
+
+  const appContainer = document.getElementById('app');
+  if (store.settings.sidebarCollapsed && appContainer) {
+    appContainer.classList.add('collapsed');
+  }
+
+  // Bind Sidebar Collapse Toggle Button
+  const btnSidebarToggle = document.getElementById('btn-sidebar-toggle');
+  btnSidebarToggle?.addEventListener('click', () => {
+    if (appContainer) {
+      const isCollapsed = appContainer.classList.toggle('collapsed');
+      store.updateSettings({ sidebarCollapsed: isCollapsed });
+      
+      // Dispatch resize event to force Chart.js updates after sidebar animation ends
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 350);
+    }
+  });
   
   // 2. Initialize Modals and Forms Bindings
   initModals();

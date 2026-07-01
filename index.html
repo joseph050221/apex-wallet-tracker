@@ -33,6 +33,9 @@
             <i data-lucide="wallet" class="neon-glow-icon"></i>
           </div>
           <span class="logo-text">Apex<span>Wallet</span></span>
+          <button class="btn-sidebar-toggle" id="btn-sidebar-toggle" aria-label="Toggle Sidebar">
+            <i data-lucide="chevron-left" id="sidebar-toggle-icon"></i>
+          </button>
         </div>
         
         <nav class="sidebar-nav">
@@ -668,6 +671,26 @@
           </form>
         </div>
       </div>
+
+      <!-- Mobile Bottom Navigation Bar -->
+      <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <button class="mobile-nav-item active" data-tab="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="wallet">
+          <i data-lucide="credit-card"></i>
+          <span>Cards</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="analytics">
+          <i data-lucide="trending-up"></i>
+          <span>Trends</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="simulator">
+          <i data-lucide="cpu"></i>
+          <span>Simulator</span>
+        </button>
+      </nav>
 
       <!-- Toast notifications container -->
       <div class="toast-container" id="toast-notifications"></div>
