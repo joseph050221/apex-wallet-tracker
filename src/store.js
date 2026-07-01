@@ -1,4 +1,7 @@
-// Application State Store with LocalStorage Persistence
+// Application State Store with Firestore Persistence (per authenticated user)
+
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from './firebase.js';
 
 const DEFAULT_CARDS = [
   {
@@ -8,8 +11,7 @@ const DEFAULT_CARDS = [
     last4: '8593',
     color: 'card-theme-blue',
     limit: 20000,
-    balance: 1425.80,
-    autoSync: true
+    balance: 1425.80
   },
   {
     id: 'card-2',
@@ -18,8 +20,7 @@ const DEFAULT_CARDS = [
     last4: '1007',
     color: 'card-theme-gold',
     limit: 15000,
-    balance: 842.10,
-    autoSync: true
+    balance: 842.10
   },
   {
     id: 'card-3',
@@ -28,8 +29,7 @@ const DEFAULT_CARDS = [
     last4: '4022',
     color: 'card-theme-silver',
     limit: 10000,
-    balance: 312.40,
-    autoSync: true
+    balance: 312.40
   },
   {
     id: 'card-4',
@@ -38,8 +38,7 @@ const DEFAULT_CARDS = [
     last4: '6240',
     color: 'card-theme-purple',
     limit: 8000,
-    balance: 95.00,
-    autoSync: false
+    balance: 95.00
   }
 ];
 
@@ -51,7 +50,7 @@ const DEFAULT_TRANSACTIONS = [
     category: 'Shopping',
     cardId: 'card-1',
     date: '2026-06-29',
-    source: 'Google Wallet Sync'
+    source: 'Payment Simulator'
   },
   {
     id: 'tx-2',
@@ -60,7 +59,7 @@ const DEFAULT_TRANSACTIONS = [
     category: 'Dining',
     cardId: 'card-2',
     date: '2026-06-28',
-    source: 'Google Wallet Sync'
+    source: 'Payment Simulator'
   },
   {
     id: 'tx-3',
@@ -69,7 +68,7 @@ const DEFAULT_TRANSACTIONS = [
     category: 'Transport',
     cardId: 'card-1',
     date: '2026-06-27',
-    source: 'Google Wallet Sync'
+    source: 'Payment Simulator'
   },
   {
     id: 'tx-4',
@@ -78,7 +77,7 @@ const DEFAULT_TRANSACTIONS = [
     category: 'Groceries',
     cardId: 'card-2',
     date: '2026-06-26',
-    source: 'Google Wallet Sync'
+    source: 'Payment Simulator'
   },
   {
     id: 'tx-5',
@@ -87,7 +86,7 @@ const DEFAULT_TRANSACTIONS = [
     category: 'Entertainment',
     cardId: 'card-3',
     date: '2026-06-25',
-    source: 'Google Wallet Sync'
+    source: 'Payment Simulator'
   },
   {
     id: 'tx-6',
@@ -96,7 +95,7 @@ const DEFAULT_TRANSACTIONS = [
     category: 'Travel',
     cardId: 'card-1',
     date: '2026-06-24',
-    source: 'Google Wallet Sync'
+    source: 'Payment Simulator'
   },
   {
     id: 'tx-7',
@@ -119,22 +118,21 @@ const DEFAULT_BUDGETS = {
   Travel: 500
 };
 
+const DEFAULT_SETTINGS = {
+  theme: 'dark',
+  sidebarCollapsed: false,
+  notify: true
+};
+
 class StateStore {
   constructor() {
+    this.currentUid = null;
+    this.ready = false;
     this.cards = [];
     this.transactions = [];
-    this.walletConnected = false;
-    this.connectedEmail = '';
-    this.lastSyncTime = null;
-    this.settings = {
-      autoSync: true,
-      notify: true,
-      autoCategorize: true,
-      theme: 'dark'
-    };
+    this.settings = { ...DEFAULT_SETTINGS };
     this.categoryBudgets = DEFAULT_BUDGETS;
     this.listeners = [];
-    this.loadState();
   }
 
   // Subscribe to state updates
@@ -149,58 +147,71 @@ class StateStore {
     this.listeners.forEach(callback => callback(this));
   }
 
-  // Load configuration from local storage
-  loadState() {
+  // Build the plain object shape persisted to Firestore
+  _snapshotState() {
+    return {
+      cards: this.cards,
+      transactions: this.transactions,
+      settings: this.settings,
+      categoryBudgets: this.categoryBudgets
+    };
+  }
+
+  // Load (or seed) state for a newly authenticated user
+  async initForUser(uid) {
+    this.currentUid = uid;
+    this.ready = false;
+
     try {
-      const savedState = localStorage.getItem('apex_wallet_state');
-      if (savedState) {
-        const parsed = JSON.parse(savedState);
-        this.cards = parsed.cards || DEFAULT_CARDS;
-        this.transactions = parsed.transactions || DEFAULT_TRANSACTIONS;
-        this.walletConnected = parsed.walletConnected ?? false;
-        this.connectedEmail = parsed.connectedEmail || '';
-        this.lastSyncTime = parsed.lastSyncTime || null;
-        this.settings = parsed.settings || this.settings;
-        this.categoryBudgets = parsed.categoryBudgets || DEFAULT_BUDGETS;
+      const ref = doc(db, 'users', uid);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        const data = snap.data();
+        this.cards = data.cards || DEFAULT_CARDS;
+        this.transactions = data.transactions || DEFAULT_TRANSACTIONS;
+        this.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+        this.categoryBudgets = data.categoryBudgets || DEFAULT_BUDGETS;
       } else {
+        // First-ever login for this account: seed with demo data
         this.cards = DEFAULT_CARDS;
         this.transactions = DEFAULT_TRANSACTIONS;
-        this.walletConnected = false;
-        this.connectedEmail = '';
-        this.lastSyncTime = null;
+        this.settings = { ...DEFAULT_SETTINGS };
         this.categoryBudgets = DEFAULT_BUDGETS;
+        await setDoc(ref, this._snapshotState());
       }
     } catch (e) {
-      console.error('Error loading state from LocalStorage, resetting to defaults.', e);
+      console.error('Error loading state from Firestore, using defaults.', e);
       this.cards = DEFAULT_CARDS;
       this.transactions = DEFAULT_TRANSACTIONS;
+      this.settings = { ...DEFAULT_SETTINGS };
+      this.categoryBudgets = DEFAULT_BUDGETS;
     }
+
+    this.ready = true;
     this.notifyListeners();
   }
 
-  // Save current configurations to local storage
+  // Reset in-memory state on logout so a second account never sees stale data
+  clearForLogout() {
+    this.currentUid = null;
+    this.ready = false;
+    this.cards = [];
+    this.transactions = [];
+    this.settings = { ...DEFAULT_SETTINGS };
+    this.categoryBudgets = DEFAULT_BUDGETS;
+    this.notifyListeners();
+  }
+
+  // Persist current state to Firestore (fire-and-forget) and notify listeners
   saveState() {
-    try {
-      const stateObj = {
-        cards: this.cards,
-        transactions: this.transactions,
-        walletConnected: this.walletConnected,
-        connectedEmail: this.connectedEmail,
-        lastSyncTime: this.lastSyncTime,
-        settings: this.settings,
-        categoryBudgets: this.categoryBudgets
-      };
-      localStorage.setItem('apex_wallet_state', JSON.stringify(stateObj));
-    } catch (e) {
-      console.error('Error writing to LocalStorage', e);
+    if (this.currentUid) {
+      const ref = doc(db, 'users', this.currentUid);
+      setDoc(ref, this._snapshotState()).catch(e => {
+        console.error('Error writing to Firestore', e);
+      });
     }
     this.notifyListeners();
-  }
-
-  // Clear data back to initial defaults
-  resetState() {
-    localStorage.removeItem('apex_wallet_state');
-    this.loadState();
   }
 
   // Add a new transaction
@@ -232,8 +243,8 @@ class StateStore {
     // === RUN SMART SPEND CHECKS ===
 
     // 1. Check duplicate transaction (same merchant & amount within 10 minutes/transactions)
-    const duplicate = otherTxs.slice(0, 3).find(t => 
-      t.merchant.toLowerCase() === merchant.toLowerCase() && 
+    const duplicate = otherTxs.slice(0, 3).find(t =>
+      t.merchant.toLowerCase() === merchant.toLowerCase() &&
       Math.abs(t.amount - numericAmount) < 0.01
     );
     if (duplicate) {
@@ -286,7 +297,7 @@ class StateStore {
       .reduce((sum, t) => sum + t.amount, 0);
     const budget = this.categoryBudgets[category] || 200;
     const prevCategorySpent = categorySpent - numericAmount;
-    
+
     const prevPct = (prevCategorySpent / budget) * 100;
     const currentPct = (categorySpent / budget) * 100;
 
@@ -336,8 +347,7 @@ class StateStore {
       last4,
       color: color || 'card-theme-blue',
       limit: parseFloat(limit) || 0,
-      balance: 0.00,
-      autoSync: this.walletConnected // Set auto-sync enabled automatically if Google Wallet linked
+      balance: 0.00
     };
 
     this.cards.push(newCard);
@@ -358,49 +368,6 @@ class StateStore {
       }
     });
 
-    this.saveState();
-    return true;
-  }
-
-  // Enable/disable card auto sync
-  toggleCardSync(cardId, enabled) {
-    const card = this.cards.find(c => c.id === cardId);
-    if (card) {
-      card.autoSync = enabled;
-      this.saveState();
-      return true;
-    }
-    return false;
-  }
-
-  // Link Google Wallet account
-  connectWallet(email) {
-    this.walletConnected = true;
-    this.connectedEmail = email || 'alex.mercer@gmail.com';
-    this.lastSyncTime = new Date().toISOString();
-    // Enable autoSync for all existing cards upon wallet connection
-    this.cards.forEach(card => {
-      card.autoSync = true;
-    });
-    this.saveState();
-  }
-
-  // Disconnect Google Wallet
-  disconnectWallet() {
-    this.walletConnected = false;
-    this.connectedEmail = '';
-    this.lastSyncTime = null;
-    // Turn off sync for cards
-    this.cards.forEach(card => {
-      card.autoSync = false;
-    });
-    this.saveState();
-  }
-
-  // Perform a mock manual sync trigger
-  triggerSync() {
-    if (!this.walletConnected) return false;
-    this.lastSyncTime = new Date().toISOString();
     this.saveState();
     return true;
   }
@@ -433,12 +400,20 @@ class StateStore {
       }
     });
 
+    // Transactions logged in the current calendar month
+    const now = new Date();
+    const transactionsThisMonth = this.transactions.filter(tx => {
+      const txDate = new Date(tx.date);
+      return txDate.getFullYear() === now.getFullYear() && txDate.getMonth() === now.getMonth();
+    }).length;
+
     return {
       totalSpent,
       percentageChange: percentageDiff.toFixed(1),
       activeCards,
       categoryTotals,
-      cardTotals
+      cardTotals,
+      transactionsThisMonth
     };
   }
 }

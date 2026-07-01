@@ -1,4 +1,4 @@
-// Google Wallet & POS Terminal Simulator Logic
+// Payment Simulator & POS Terminal Logic
 import store from './store.js';
 
 let activePhoneCardId = null;
@@ -68,7 +68,7 @@ export function renderPhoneCards(cards) {
   if (cards.length === 0) {
     container.innerHTML = `
       <div class="no-cards-prompt" style="font-size:12px; color:#6b7280; text-align:center; padding: 40px 10px;">
-        No cards linked.<br>Link Wallet or add manual card.
+        No cards added yet.<br>Add a card under My Cards.
       </div>
     `;
     activePhoneCardId = null;
@@ -170,51 +170,23 @@ export function initSimulator(toastManager, onTxSyncCallback) {
     posStatus.style.color = '#f59e0b';
   });
 
-  // Tap-to-pay trigger sync routine
+  // Tap-to-pay trigger routine
   btnTapPay.addEventListener('click', () => {
-    // 1. Verify Wallet Connected
-    if (!store.walletConnected) {
-      logToConsole('Connection Error: Google Wallet account not linked.', 'warning');
-      toastManager.show(
-        'Google Wallet Sync Error',
-        'Cannot authorize sync. Link your Google Wallet from the Settings / Wallet tab first.',
-        'warning'
-      );
-      
-      // Flash indicator red
-      const badge = document.getElementById('wallet-status-indicator');
-      if (badge) {
-        badge.style.transform = 'scale(1.1)';
-        setTimeout(() => badge.style.transform = '', 200);
-      }
-      return;
-    }
-
-    // 2. Verify we have cards
+    // 1. Verify we have cards
     if (store.cards.length === 0) {
-      logToConsole('Authorization Error: No payment cards found in Google Wallet.', 'warning');
-      toastManager.show('Google Wallet', 'Sync aborted: Please add a card to your wallet first.', 'warning');
+      logToConsole('Authorization Error: No payment cards found.', 'warning');
+      toastManager.show('Payment Simulator', 'Tap aborted: Please add a card first.', 'warning');
       return;
     }
 
-    // 3. Verify active card has autoSync enabled
+    // 2. Verify a card is selected
     const selectedCard = store.cards.find(c => c.id === activePhoneCardId);
     if (!selectedCard) {
-      logToConsole('Sync Error: Select a card to pay.', 'warning');
+      logToConsole('Tap Error: Select a card to pay.', 'warning');
       return;
     }
 
-    if (!selectedCard.autoSync) {
-      logToConsole(`Sync Denied: Auto-sync is disabled for ${selectedCard.name}.`, 'warning');
-      toastManager.show(
-        'Sync Blocked',
-        `Google Wallet sync is disabled for ${selectedCard.name}. Enable it under Cards & Wallet.`,
-        'warning'
-      );
-      return;
-    }
-
-    // 4. Begin NFC simulation
+    // 3. Begin NFC simulation
     btnTapPay.disabled = true;
     posStatus.textContent = 'PROCESSING...';
     posStatus.style.color = '#f59e0b';
@@ -230,7 +202,7 @@ export function initSimulator(toastManager, onTxSyncCallback) {
     playNfcBeep();
 
     setTimeout(() => {
-      // 5. Add Transaction
+      // 4. Add Transaction
       const merchant = displayMerchant.textContent;
       const amount = parseFloat(simAmountInput.value) || 0.01;
       const category = simCategorySelect.value;
@@ -242,22 +214,21 @@ export function initSimulator(toastManager, onTxSyncCallback) {
         category,
         cardId: activePhoneCardId,
         date,
-        source: 'Google Wallet Sync'
+        source: 'Payment Simulator'
       });
 
-      // 6. Complete UI Feedback
+      // 5. Complete UI Feedback
       posStatus.textContent = 'APPROVED';
       posStatus.style.color = '#10B981';
-      
+
       if (nfcWave) {
         nfcWave.classList.remove('pulsing');
       }
-      
+
       logToConsole(`Payment Approved! $${amount.toFixed(2)} charged to ${selectedCard.name} (...${selectedCard.last4}).`, 'success');
-      logToConsole(`Google Wallet sync event parsed successfully. Store updated.`, 'success');
-      
+
       toastManager.show(
-        'Google Wallet Sync',
+        'Payment Simulator',
         `Tap Success: $${amount.toFixed(2)} at ${merchant} (Card: ...${selectedCard.last4})`,
         'success'
       );

@@ -1,16 +1,24 @@
 import './style.css';
 import store from './store.js';
-import { 
-  renderDonutChart, 
-  renderTrendChart, 
-  renderCardChart, 
-  updateChartThemes 
+import {
+  renderDonutChart,
+  renderTrendChart,
+  renderCardChart,
+  updateChartThemes
 } from './charts.js';
-import { 
-  initSimulator, 
-  renderPhoneCards, 
-  logToConsole 
+import {
+  initSimulator,
+  renderPhoneCards,
+  logToConsole
 } from './simulator.js';
+import {
+  signUp,
+  signIn,
+  signInWithGoogle,
+  signOutUser,
+  onAuthChange,
+  authErrorMessage
+} from './auth.js';
 
 // TOAST NOTIFICATION MANAGER
 const toastManager = {
@@ -20,7 +28,7 @@ const toastManager = {
 
     const toast = document.createElement('div');
     toast.className = `toast`;
-    
+
     // Choose icon based on type
     let iconName = 'info';
     if (type === 'success') iconName = 'check-circle';
@@ -40,7 +48,7 @@ const toastManager = {
     `;
 
     container.appendChild(toast);
-    
+
     // Initialize icons for the dynamic toast
     if (window.lucide) {
       window.lucide.createIcons();
@@ -63,18 +71,27 @@ const toastManager = {
 };
 
 // PUSH DESKTOP NOTIFICATION SENDER
+// Always attempts to notify (no manual settings toggle); requests browser
+// permission lazily the first time an alert fires.
 function triggerPushNotification(title, body) {
-  if (store.settings.notify && 'Notification' in window) {
-    if (Notification.permission === 'granted') {
-      try {
-        new Notification(title, {
-          body: body,
-          icon: '/favicon.svg'
-        });
-      } catch (err) {
-        console.warn('HTML5 Notification trigger failed', err);
-      }
+  if (!('Notification' in window)) return;
+
+  if (Notification.permission === 'granted') {
+    try {
+      new Notification(title, { body, icon: '/favicon.svg' });
+    } catch (err) {
+      console.warn('HTML5 Notification trigger failed', err);
     }
+  } else if (Notification.permission === 'default') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        try {
+          new Notification(title, { body, icon: '/favicon.svg' });
+        } catch (err) {
+          console.warn('HTML5 Notification trigger failed', err);
+        }
+      }
+    });
   }
 }
 
@@ -83,19 +100,19 @@ function playWarningBeep(isCritical = false) {
   try {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextClass) return;
-    
+
     const audioCtx = new AudioContextClass();
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
-    
+
     osc.connect(gainNode);
     gainNode.connect(audioCtx.destination);
-    
+
     // Sawtooth waveform for warnings, sine for info
     osc.type = isCritical ? 'sawtooth' : 'triangle';
     osc.frequency.setValueAtTime(isCritical ? 190 : 310, audioCtx.currentTime);
     gainNode.gain.setValueAtTime(0.04, audioCtx.currentTime);
-    
+
     osc.start();
     osc.stop(audioCtx.currentTime + (isCritical ? 0.35 : 0.2));
   } catch (e) {
@@ -127,17 +144,17 @@ function initTabNavigation() {
   const mainSubtitle = document.getElementById('page-subtitle-main');
 
   const subtitles = {
-    dashboard: 'Overview of your synced Google Wallet transactions',
-    wallet: 'Manage your credit cards, check balances, and wallet linkages',
+    dashboard: 'Overview of your transactions',
+    wallet: 'Manage your credit cards and payment methods',
     analytics: 'Deep dive into spending timeline and categorical distribution',
-    simulator: 'Interactive sandbox terminal simulating NFC Google Wallet syncs'
+    simulator: 'Interactive sandbox terminal for simulating NFC payments'
   };
 
   const titles = {
     dashboard: 'Dashboard',
-    wallet: 'Cards & Wallet',
+    wallet: 'My Cards',
     analytics: 'Analytics',
-    simulator: 'Wallet Simulator'
+    simulator: 'Payment Simulator'
   };
 
   navItems.forEach(item => {
@@ -192,41 +209,35 @@ function initTabNavigation() {
 }
 
 // THEME TOGGLE (DARK / LIGHT)
-function initThemeToggle() {
-  const toggleBtn = document.getElementById('btn-theme-toggle');
+function applyThemeFromSettings() {
   const sunIcon = document.getElementById('theme-icon-sun');
   const moonIcon = document.getElementById('theme-icon-moon');
   const themeText = document.getElementById('theme-text');
 
-  // Load saved theme
   if (store.settings.theme === 'light') {
     document.body.classList.remove('dark-theme');
     document.body.classList.add('light-theme');
     sunIcon.classList.remove('hidden');
     moonIcon.classList.add('hidden');
     themeText.textContent = 'Light Mode';
+  } else {
+    document.body.classList.remove('light-theme');
+    document.body.classList.add('dark-theme');
+    sunIcon.classList.add('hidden');
+    moonIcon.classList.remove('hidden');
+    themeText.textContent = 'Dark Mode';
   }
+
+  updateChartThemes();
+}
+
+function bindThemeToggleClick() {
+  const toggleBtn = document.getElementById('btn-theme-toggle');
 
   toggleBtn.addEventListener('click', () => {
     const isDark = document.body.classList.contains('dark-theme');
-    if (isDark) {
-      document.body.classList.remove('dark-theme');
-      document.body.classList.add('light-theme');
-      sunIcon.classList.remove('hidden');
-      moonIcon.classList.add('hidden');
-      themeText.textContent = 'Light Mode';
-      store.updateSettings({ theme: 'light' });
-    } else {
-      document.body.classList.remove('light-theme');
-      document.body.classList.add('dark-theme');
-      sunIcon.classList.add('hidden');
-      moonIcon.classList.remove('hidden');
-      themeText.textContent = 'Dark Mode';
-      store.updateSettings({ theme: 'dark' });
-    }
-
-    // Refresh charts to match dark/light scales
-    updateChartThemes();
+    store.updateSettings({ theme: isDark ? 'light' : 'dark' });
+    applyThemeFromSettings();
     toastManager.show('Theme Updated', `Switched to ${!isDark ? 'Dark' : 'Light'} UI style`, 'info');
   });
 }
@@ -237,63 +248,28 @@ function renderAppUI() {
   const txs = store.transactions;
   const cards = store.cards;
 
-  // 1. TOP HEADER STATUS BADGES
-  const statusBadge = document.getElementById('wallet-status-indicator');
-  const statusText = document.getElementById('wallet-status-text');
-
-  if (store.walletConnected) {
-    statusBadge.className = 'wallet-status-badge connected';
-    statusText.textContent = 'Google Wallet: Linked';
-  } else {
-    statusBadge.className = 'wallet-status-badge disconnected';
-    statusText.textContent = 'Google Wallet: Disconnected';
-  }
-
-  // 2. DASHBOARD STAT CARDS
+  // 1. DASHBOARD STAT CARDS
   document.getElementById('stat-total-spent').textContent = `$${metrics.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   document.getElementById('stat-percentage-change').textContent = `${metrics.percentageChange}%`;
   document.getElementById('stat-active-cards').textContent = metrics.activeCards;
+  document.getElementById('stat-transactions-month').textContent = metrics.transactionsThisMonth;
 
-  const syncStatusVal = document.getElementById('stat-sync-status');
-  const syncStatusLast = document.getElementById('stat-sync-last');
-
-  if (store.walletConnected) {
-    syncStatusVal.textContent = 'Active';
-    syncStatusVal.style.color = 'var(--accent)';
-    
-    if (store.lastSyncTime) {
-      const diffSecs = Math.floor((new Date() - new Date(store.lastSyncTime)) / 1000);
-      if (diffSecs < 10) syncStatusLast.textContent = 'Just synced';
-      else if (diffSecs < 60) syncStatusLast.textContent = `${diffSecs}s ago`;
-      else syncStatusLast.textContent = `${Math.floor(diffSecs/60)}m ago`;
-    } else {
-      syncStatusLast.textContent = 'Pending sync';
-    }
-  } else {
-    syncStatusVal.textContent = 'Inactive';
-    syncStatusVal.style.color = 'var(--danger)';
-    syncStatusLast.textContent = 'Link account to sync';
-  }
-
-  // 3. RENDER CREDIT CARDS HORIZONTAL SCROLL
+  // 2. RENDER CREDIT CARDS HORIZONTAL SCROLL
   renderDashboardCards(cards);
 
-  // 4. RENDER TRANSACTION LEDGER (with filters)
+  // 3. RENDER TRANSACTION LEDGER (with filters)
   renderTransactionsLedger();
 
-  // 5. RENDER PROGRESS CATEGORIES LIST
+  // 4. RENDER PROGRESS CATEGORIES LIST
   renderCategoryProgressList(metrics);
 
-  // 6. RENDER WALLET TAB DETAILS
+  // 5. RENDER WALLET TAB DETAILS
   renderWalletTabDetails(cards);
 
-  // 7. GOOGLE WALLET TAB INTEGRATION STATE
-  renderGoogleWalletSyncState();
-
-  // 8. PHONE CARDS INSIDE WALLET SIMULATOR
+  // 6. PHONE CARDS INSIDE PAYMENT SIMULATOR
   renderPhoneCards(cards);
 
-  // 9. DRAW CHARTS
+  // 7. DRAW CHARTS
   renderDonutChart(metrics);
   renderTrendChart(txs, 'month');
   renderCardChart(cards, txs);
@@ -304,18 +280,18 @@ function renderAppUI() {
   }
 }
 
-// 3. Render dashboard scroll cards
+// Render dashboard scroll cards
 function renderDashboardCards(cards) {
   const container = document.getElementById('cards-scroll-container');
   if (!container) return;
 
   container.innerHTML = '';
-  
+
   if (cards.length === 0) {
     container.innerHTML = `
       <div class="empty-cards-box" style="flex:1; border: 1px dashed var(--border-color); border-radius: 12px; padding: 32px; text-align:center; color: var(--text-secondary);">
-        <p>No card linked to your wallet.</p>
-        <p style="font-size:12px; margin-top:4px;">Add a new credit card manually under Cards & Wallet.</p>
+        <p>No cards added yet.</p>
+        <p style="font-size:12px; margin-top:4px;">Add a new credit card under My Cards.</p>
       </div>
     `;
     return;
@@ -324,7 +300,7 @@ function renderDashboardCards(cards) {
   cards.forEach(card => {
     const cardEl = document.createElement('div');
     cardEl.className = `credit-card-widget ${card.color}`;
-    
+
     // Network name visual representation
     let netLogo = 'VISA';
     if (card.brand === 'mastercard') netLogo = 'Mastercard';
@@ -346,7 +322,7 @@ function renderDashboardCards(cards) {
         </div>
         <span class="card-network-logo">${netLogo}</span>
       </div>
-      
+
       <div class="card-balance-overlay">
         <span class="overlay-bal-label">Month Spend:</span>
         <span class="overlay-bal-val">$${card.balance.toFixed(2)}</span>
@@ -362,7 +338,7 @@ function renderDashboardCards(cards) {
       const h = rect.height;
       const rx = -( (y - h/2) / h ) * 16; // Up to 16deg rotateX
       const ry = ( (x - w/2) / w ) * 16;  // Up to 16deg rotateY
-      
+
       cardEl.style.setProperty('--rx', `${rx}deg`);
       cardEl.style.setProperty('--ry', `${ry}deg`);
       cardEl.style.setProperty('--mx', `${(x / w) * 100}%`);
@@ -378,7 +354,7 @@ function renderDashboardCards(cards) {
   });
 }
 
-// 4. Render Transaction Ledger List with dynamic filtering
+// Render Transaction Ledger List with dynamic filtering
 function renderTransactionsLedger() {
   const tbody = document.getElementById('transactions-tbody');
   if (!tbody) return;
@@ -410,7 +386,7 @@ function renderTransactionsLedger() {
 
   filtered.forEach(tx => {
     const tr = document.createElement('tr');
-    
+
     // Find card label
     const card = store.cards.find(c => c.id === tx.cardId);
     const cardLabel = card ? `${card.name.split(' ')[0]} (...${card.last4})` : 'Unlinked Card';
@@ -423,6 +399,9 @@ function renderTransactionsLedger() {
     // Choose class color for categories
     const catClass = tx.category.toLowerCase().replace(' & ', '-');
 
+    // Icon based on how the transaction was logged
+    const sourceIcon = tx.source === 'Manual Input' ? 'edit-2' : 'nfc';
+
     tr.innerHTML = `
       <td>
         <div class="merchant-info">
@@ -430,7 +409,7 @@ function renderTransactionsLedger() {
           <div class="merchant-details">
             <span class="merchant-name">${tx.merchant}</span>
             <span class="tag-wallet-badge">
-              <i data-lucide="${tx.source === 'Manual Input' ? 'edit-2' : 'google'}"></i>
+              <i data-lucide="${sourceIcon}"></i>
               <span>${tx.source}</span>
             </span>
           </div>
@@ -471,7 +450,7 @@ function renderTransactionsLedger() {
   }
 }
 
-// 5. Render progress bars breakdown of categories
+// Render progress bars breakdown of categories
 function renderCategoryProgressList(metrics) {
   const container = document.getElementById('category-progress-list');
   if (!container) return;
@@ -511,7 +490,7 @@ function renderCategoryProgressList(metrics) {
   });
 }
 
-// 6. Render Wallet Tab detailing settings
+// Render My Cards tab management list
 function renderWalletTabDetails(cards) {
   const container = document.getElementById('wallet-cards-detailed-list');
   if (!container) return;
@@ -521,8 +500,8 @@ function renderWalletTabDetails(cards) {
   if (cards.length === 0) {
     container.innerHTML = `
       <div style="border: 1px dashed var(--border-color); border-radius: 12px; padding: 40px 20px; text-align:center; color: var(--text-secondary);">
-        <h3>No linked credit cards</h3>
-        <p style="font-size:12px; margin-top:8px;">Add payment cards configured in Google Wallet to track monthly expenditures.</p>
+        <h3>No cards yet</h3>
+        <p style="font-size:12px; margin-top:8px;">Add a payment card to start tracking monthly expenditures.</p>
       </div>
     `;
     return;
@@ -531,16 +510,15 @@ function renderWalletTabDetails(cards) {
   cards.forEach(card => {
     const item = document.createElement('div');
     item.className = 'card-manage-item';
-    
+
     const limitPct = card.limit > 0 ? ((card.balance / card.limit) * 100).toFixed(0) : 0;
-    const isChecked = card.autoSync ? 'checked' : '';
 
     item.innerHTML = `
       <div class="card-manage-visual ${card.color}">
         <span class="mini-network">${card.brand.toUpperCase()}</span>
         <span class="mini-last4">•••• ${card.last4}</span>
       </div>
-      
+
       <div class="card-manage-info">
         <span class="card-manage-title">${card.name}</span>
         <div class="card-manage-meta">
@@ -550,26 +528,11 @@ function renderWalletTabDetails(cards) {
       </div>
 
       <div class="card-manage-actions">
-        <!-- Toggle for specific card autoSync -->
-        <label class="toggle-switch" style="margin-bottom:0;" title="Configure Google Wallet synchronization">
-          <input type="checkbox" class="chk-card-sync-toggle" data-id="${card.id}" ${isChecked}>
-          <span class="toggle-slider"></span>
-          <span class="toggle-label" style="font-size:12px; font-weight:600; color:var(--text-secondary);">Google Sync</span>
-        </label>
-
         <button class="btn-icon-danger btn-delete-card" data-id="${card.id}" title="Remove Card">
           <i data-lucide="trash-2"></i>
         </button>
       </div>
     `;
-
-    // Bind AutoSync toggle
-    item.querySelector('.chk-card-sync-toggle').addEventListener('change', (e) => {
-      const enabled = e.target.checked;
-      store.toggleCardSync(card.id, enabled);
-      logToConsole(`Google Wallet sync ${enabled ? 'enabled' : 'disabled'} for ${card.name}.`, enabled ? 'success' : 'system');
-      renderAppUI();
-    });
 
     // Bind Delete Card button
     item.querySelector('.btn-delete-card').addEventListener('click', () => {
@@ -584,41 +547,6 @@ function renderWalletTabDetails(cards) {
   });
 }
 
-// 7. Render Google Wallet connection panel depending on OAuth status
-function renderGoogleWalletSyncState() {
-  const discView = document.getElementById('wallet-card-disconnected-view');
-  const connView = document.getElementById('wallet-card-connected-view');
-  
-  const connectedEmail = document.getElementById('connected-account-email');
-  const connectedLastSync = document.getElementById('connected-account-last-sync');
-  const connectedCardCount = document.getElementById('connected-account-card-count');
-
-  if (store.walletConnected) {
-    discView.classList.add('hidden');
-    connView.classList.remove('hidden');
-
-    connectedEmail.textContent = store.connectedEmail;
-    connectedCardCount.textContent = `${store.cards.length} Cards`;
-    
-    if (store.lastSyncTime) {
-      connectedLastSync.textContent = new Date(store.lastSyncTime).toLocaleTimeString();
-    } else {
-      connectedLastSync.textContent = 'None';
-    }
-
-    // Sync UI elements state with store
-    const chkAuto = document.getElementById('chk-auto-sync');
-    const chkNotify = document.getElementById('chk-notify-sync');
-    const chkCategorize = document.getElementById('chk-categorize-sync');
-    if (chkAuto) chkAuto.checked = store.settings.autoSync;
-    if (chkNotify) chkNotify.checked = store.settings.notify;
-    if (chkCategorize) chkCategorize.checked = store.settings.autoCategorize;
-  } else {
-    discView.classList.remove('hidden');
-    connView.classList.add('hidden');
-  }
-}
-
 // RENDERING ANALYTICS DETAIL CARDS
 function renderAnalyticsTrend(range = 'month') {
   renderTrendChart(store.transactions, range);
@@ -628,7 +556,7 @@ function renderAnalyticsTrend(range = 'month') {
 
   container.innerHTML = '';
   const metrics = store.getMetrics();
-  
+
   // Create mapping of category to transaction items count
   const categoryCounts = {};
   store.transactions.forEach(tx => {
@@ -664,7 +592,7 @@ function renderAnalyticsTrend(range = 'month') {
         </div>
         <span class="cat-stat-count">${count} txs</span>
       </div>
-      
+
       <div class="cat-card-stats">
         <div>
           <div class="cat-stat-lbl">Total Spent</div>
@@ -691,7 +619,7 @@ function initModals() {
   const btnCloseExpense = document.getElementById('btn-close-expense-modal');
   const btnCancelExpense = document.getElementById('btn-cancel-expense-modal');
   const formExpense = document.getElementById('form-add-expense');
-  
+
   // Card elements
   const selectCardForm = document.getElementById('form-card');
 
@@ -699,7 +627,7 @@ function initModals() {
   function populateModalCardsDropdown() {
     if (!selectCardForm) return;
     selectCardForm.innerHTML = '';
-    
+
     if (store.cards.length === 0) {
       const opt = document.createElement('option');
       opt.value = '';
@@ -739,7 +667,7 @@ function initModals() {
     const date = document.getElementById('form-date').value;
 
     if (!cardId) {
-      alert('You must add or link a card first!');
+      alert('You must add a card first!');
       return;
     }
 
@@ -753,7 +681,7 @@ function initModals() {
     });
 
     toastManager.show('Transaction Added', `Directly saved $${amount.toFixed(2)} spent at ${merchant}`, 'success');
-    
+
     // Check and trigger smart alerts
     if (alerts && alerts.length > 0) {
       alerts.forEach(alert => {
@@ -764,77 +692,6 @@ function initModals() {
     closeExpenseModal();
     formExpense.reset();
     renderAppUI();
-  });
-
-  // OAUTH SIGN IN POPUP DIALOG FOR CONNECTING GOOGLE WALLET
-  const modalOAuth = document.getElementById('modal-oauth-wallet');
-  const btnSyncShortcut = document.getElementById('btn-sync-wallet-shortcut');
-  const btnConnectAction = document.getElementById('btn-connect-wallet-action');
-  
-  const openOAuthModal = () => {
-    modalOAuth.classList.remove('hidden');
-  };
-
-  btnSyncShortcut?.addEventListener('click', openOAuthModal);
-  btnConnectAction?.addEventListener('click', openOAuthModal);
-
-  document.getElementById('btn-oauth-deny').addEventListener('click', () => {
-    modalOAuth.classList.add('hidden');
-    toastManager.show('Auth Aborted', 'Google account verification was cancelled', 'warning');
-    logToConsole('Connection cancelled by user during Google Sign-in.', 'warning');
-  });
-
-  document.getElementById('btn-oauth-approve').addEventListener('click', () => {
-    modalOAuth.classList.add('hidden');
-    
-    // Simulate linking animation
-    const statusPulse = document.querySelector('#wallet-status-indicator .status-pulse');
-    const badgeText = document.getElementById('wallet-status-text');
-    const statusBadge = document.getElementById('wallet-status-indicator');
-
-    statusBadge.className = 'wallet-status-badge syncing';
-    badgeText.textContent = 'Verifying Auth...';
-    logToConsole('Requesting OAuth verification from accounts.google.com...', 'system');
-
-    setTimeout(() => {
-      store.connectWallet('alex.mercer@gmail.com');
-      renderAppUI();
-      
-      toastManager.show(
-        'Integration Active',
-        'Successfully connected to Google Wallet account alex.mercer@gmail.com.',
-        'success'
-      );
-      logToConsole('Google Wallet service linked. Token granted.', 'success');
-      logToConsole('Sync auto-registered: Listening on payment terminal taps.', 'success');
-    }, 1500);
-  });
-
-  // Disconnect handler
-  document.getElementById('btn-disconnect-wallet')?.addEventListener('click', () => {
-    if (confirm('Disconnect Google Wallet? Auto sync notifications will stop.')) {
-      store.disconnectWallet();
-      renderAppUI();
-      toastManager.show('Integration Terminated', 'Unlinked Google Wallet connection', 'info');
-      logToConsole('Google Wallet account disconnected.', 'warning');
-    }
-  });
-
-  // Manual trigger Sync now button
-  document.getElementById('btn-sync-now')?.addEventListener('click', () => {
-    const refreshBtnIcon = document.querySelector('#btn-sync-now i');
-    refreshBtnIcon.style.transform = 'rotate(360deg)';
-    refreshBtnIcon.style.transition = 'transform 0.8s ease';
-    
-    setTimeout(() => {
-      refreshBtnIcon.style.transform = 'rotate(0deg)';
-      refreshBtnIcon.style.transition = 'none';
-    }, 800);
-
-    store.triggerSync();
-    renderAppUI();
-    toastManager.show('Google Wallet', 'Sync complete: Card logs match cloud backup.', 'success');
-    logToConsole('Manual sync requested. Pulling ledger backups...', 'system');
   });
 
   // ADD NEW CARD POPUP MODAL
@@ -854,7 +711,7 @@ function initModals() {
 
   formCardAdd?.addEventListener('submit', (e) => {
     e.preventDefault();
-    
+
     const name = document.getElementById('form-card-name').value;
     const brand = document.getElementById('form-card-brand').value;
     const last4 = document.getElementById('form-card-last4').value;
@@ -868,48 +725,10 @@ function initModals() {
       limit: 10000 // Default limit
     });
 
-    toastManager.show('Card Linked', `Added ${name} (...${last4}) to your Google Wallet profiles`, 'success');
+    toastManager.show('Card Added', `Added ${name} (...${last4}) to your account`, 'success');
     closeCardModal();
     formCardAdd.reset();
     renderAppUI();
-  });
-
-  // BIND SETTINGS TOGGLES (Auto-sync, Notify, Auto-categorize)
-  // Since these checkboxes only appear when the wallet is linked, we delegate event listeners
-  document.addEventListener('change', (e) => {
-    if (e.target && e.target.id === 'chk-notify-sync') {
-      const enabled = e.target.checked;
-      store.updateSettings({ notify: enabled });
-      
-      if (enabled && 'Notification' in window) {
-        if (Notification.permission === 'default') {
-          Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-              toastManager.show('Notifications Enabled', 'Desktop alerts are now configured!', 'success');
-              triggerPushNotification('ApexWallet Alerts', 'Desktop alert notifications enabled successfully.');
-            } else {
-              toastManager.show('Notifications Blocked', 'Allow notifications in your browser settings to receive alerts.', 'warning');
-              e.target.checked = false;
-              store.updateSettings({ notify: false });
-            }
-          });
-        } else if (Notification.permission === 'denied') {
-          toastManager.show('Permission Blocked', 'Please grant notification permissions in your browser settings.', 'warning');
-          e.target.checked = false;
-          store.updateSettings({ notify: false });
-        }
-      }
-    }
-
-    if (e.target && e.target.id === 'chk-auto-sync') {
-      store.updateSettings({ autoSync: e.target.checked });
-      logToConsole(`Google Wallet auto-sync ${e.target.checked ? 'enabled' : 'disabled'}.`, 'system');
-    }
-
-    if (e.target && e.target.id === 'chk-categorize-sync') {
-      store.updateSettings({ autoCategorize: e.target.checked });
-      logToConsole(`Automatic spending categorization ${e.target.checked ? 'enabled' : 'disabled'}.`, 'system');
-    }
   });
 }
 
@@ -927,71 +746,165 @@ function initLedgerFilters() {
   });
 }
 
-// RECURRING REFRESH TIMER SIMULATION
-// Simulates checking the clock to auto update "synced 2m ago" details every minute
-function startSyncTimer() {
-  setInterval(() => {
-    if (store.walletConnected) {
-      const syncStatusLast = document.getElementById('stat-sync-last');
-      if (syncStatusLast && store.lastSyncTime) {
-        const diffSecs = Math.floor((new Date() - new Date(store.lastSyncTime)) / 1000);
-        if (diffSecs < 10) syncStatusLast.textContent = 'Just synced';
-        else if (diffSecs < 60) syncStatusLast.textContent = `${diffSecs}s ago`;
-        else syncStatusLast.textContent = `${Math.floor(diffSecs/60)}m ago`;
-      }
-    }
-  }, 10000);
+// SIDEBAR COLLAPSE TOGGLE
+function applySidebarCollapsedState() {
+  const appContainer = document.getElementById('app');
+  if (!appContainer) return;
+  appContainer.classList.toggle('collapsed', !!store.settings.sidebarCollapsed);
 }
 
-// APP INITIALIZATION ENTRY POINT
-document.addEventListener('DOMContentLoaded', () => {
-  // 1. Initialize Tabs & Theme Settings
-  initTabNavigation();
-  initThemeToggle();
-
+function bindSidebarToggle() {
   const appContainer = document.getElementById('app');
-  if (store.settings.sidebarCollapsed && appContainer) {
-    appContainer.classList.add('collapsed');
-  }
-
-  // Bind Sidebar Collapse Toggle Button
   const btnSidebarToggle = document.getElementById('btn-sidebar-toggle');
+
   btnSidebarToggle?.addEventListener('click', () => {
     if (appContainer) {
       const isCollapsed = appContainer.classList.toggle('collapsed');
       store.updateSettings({ sidebarCollapsed: isCollapsed });
-      
+
       // Dispatch resize event to force Chart.js updates after sidebar animation ends
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 350);
     }
   });
-  
-  // 2. Initialize Modals and Forms Bindings
-  initModals();
+}
 
-  // 3. Initialize Search / Filter controls
-  initLedgerFilters();
+// LOGOUT BUTTON
+function bindLogoutButton() {
+  document.getElementById('btn-logout')?.addEventListener('click', () => {
+    signOutUser();
+  });
+}
 
-  // 4. Initialize Google Wallet Simulator
-  initSimulator(toastManager, (newTx, alerts) => {
-    // When simulator logs a new NFC payment transaction:
-    // Update local variables and redraw app components
-    renderAppUI();
+// AUTH GATE: login / signup / Google sign-in bindings
+function showAuthError(elId, message) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = message;
+  el.classList.remove('hidden');
+}
 
-    if (alerts && alerts.length > 0) {
-      setTimeout(() => {
-        alerts.forEach(alert => triggerSmartAlert(alert));
-      }, 350);
-    }
+function hideAuthErrors() {
+  document.getElementById('login-error')?.classList.add('hidden');
+  document.getElementById('signup-error')?.classList.add('hidden');
+}
+
+function bindAuthGateEvents() {
+  const panelLogin = document.getElementById('auth-panel-login');
+  const panelSignup = document.getElementById('auth-panel-signup');
+  const formLogin = document.getElementById('form-login');
+  const formSignup = document.getElementById('form-signup');
+
+  document.getElementById('link-show-signup')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    hideAuthErrors();
+    panelLogin.classList.add('hidden');
+    panelSignup.classList.remove('hidden');
   });
 
-  // 5. Draw application lists, stats, charts
-  renderAppUI();
+  document.getElementById('link-show-login')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    hideAuthErrors();
+    panelSignup.classList.add('hidden');
+    panelLogin.classList.remove('hidden');
+  });
 
-  // 6. Launch Clock Sync details timer
-  startSyncTimer();
+  formLogin?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    hideAuthErrors();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    signIn(email, password).catch(err => showAuthError('login-error', authErrorMessage(err)));
+  });
 
-  logToConsole('Welcome to ApexWallet Tracker. Double-click simulator cards to select.', 'system');
+  formSignup?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    hideAuthErrors();
+    const email = document.getElementById('signup-email').value;
+    const password = document.getElementById('signup-password').value;
+    signUp(email, password).catch(err => showAuthError('signup-error', authErrorMessage(err)));
+  });
+
+  document.getElementById('btn-google-signin')?.addEventListener('click', () => {
+    hideAuthErrors();
+    signInWithGoogle().catch(err => showAuthError('login-error', authErrorMessage(err)));
+  });
+}
+
+function resetAuthForms() {
+  document.getElementById('form-login')?.reset();
+  document.getElementById('form-signup')?.reset();
+  hideAuthErrors();
+  document.getElementById('auth-panel-signup')?.classList.add('hidden');
+  document.getElementById('auth-panel-login')?.classList.remove('hidden');
+}
+
+// VISIBILITY HELPERS
+function showLoadingSplash() {
+  document.getElementById('initial-loading')?.classList.remove('hidden');
+  document.getElementById('auth-gate')?.classList.add('hidden');
+  document.getElementById('app')?.classList.add('hidden');
+}
+
+function showAuthGate() {
+  document.getElementById('initial-loading')?.classList.add('hidden');
+  document.getElementById('auth-gate')?.classList.remove('hidden');
+  document.getElementById('app')?.classList.add('hidden');
+}
+
+function showApp() {
+  document.getElementById('initial-loading')?.classList.add('hidden');
+  document.getElementById('auth-gate')?.classList.add('hidden');
+  document.getElementById('app')?.classList.remove('hidden');
+}
+
+// APP INITIALIZATION ENTRY POINT
+document.addEventListener('DOMContentLoaded', () => {
+  showLoadingSplash();
+  bindAuthGateEvents();
+
+  let appInitialized = false;
+  let authGeneration = 0;
+
+  onAuthChange(async (user) => {
+    const myGeneration = ++authGeneration;
+
+    if (user) {
+      await store.initForUser(user.uid);
+      if (myGeneration !== authGeneration) return; // superseded by a newer auth event
+
+      const emailEl = document.getElementById('sidebar-user-email');
+      if (emailEl) emailEl.textContent = user.email || '';
+
+      if (!appInitialized) {
+        initTabNavigation();
+        bindThemeToggleClick();
+        initModals();
+        initLedgerFilters();
+        bindSidebarToggle();
+        bindLogoutButton();
+        initSimulator(toastManager, (newTx, alerts) => {
+          renderAppUI();
+          if (alerts && alerts.length > 0) {
+            setTimeout(() => {
+              alerts.forEach(alert => triggerSmartAlert(alert));
+            }, 350);
+          }
+        });
+        appInitialized = true;
+      }
+
+      applyThemeFromSettings();
+      applySidebarCollapsedState();
+      renderAppUI();
+
+      showApp();
+      logToConsole('Welcome to ApexWallet Tracker. Click simulator cards to select.', 'system');
+    } else {
+      store.clearForLogout();
+      resetAuthForms();
+      showAuthGate();
+    }
+  });
 });
