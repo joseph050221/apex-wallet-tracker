@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Title Tag for SEO -->
+    <title>ApexWallet Tracker - Premium Expense Analytics & Google Wallet Sync</title>
+    <!-- Meta Description for SEO -->
+    <meta name="description" content="Manage your credit cards, analyze monthly spending, and sync transactions directly from Google Wallet using our interactive expense simulation suite." />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/style.css" />
+    <!-- Lucide Icons Script -->
+    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+  </head>
+  <body class="dark-theme">
+    <!-- Background Animated Blobs for Aesthetics -->
+    <div class="bg-blobs">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+    </div>
+    <!-- Main Application Container -->
+    <div id="app" class="app-container">
+      
+      <!-- Side Navigation Bar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+          <div class="logo-icon">
+            <i data-lucide="wallet" class="neon-glow-icon"></i>
+          </div>
+          <span class="logo-text">Apex<span>Wallet</span></span>
+        </div>
+        
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-tab="dashboard" id="btn-nav-dashboard">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+          </button>
+          <button class="nav-item" data-tab="wallet" id="btn-nav-wallet">
+            <i data-lucide="credit-card"></i>
+            <span>Cards & Wallet</span>
+          </button>
+          <button class="nav-item" data-tab="analytics" id="btn-nav-analytics">
+            <i data-lucide="trending-up"></i>
+            <span>Analytics</span>
+          </button>
+          <button class="nav-item simulator-nav-btn" data-tab="simulator" id="btn-nav-simulator">
+            <i data-lucide="cpu" class="simulator-pulse"></i>
+            <span>Wallet Simulator</span>
+            <span class="badge badge-accent">Live</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button class="nav-item" id="btn-theme-toggle">
+            <i data-lucide="sun" id="theme-icon-sun" class="hidden"></i>
+            <i data-lucide="moon" id="theme-icon-moon"></i>
+            <span id="theme-text">Dark Mode</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Top bar/header -->
+        <header class="top-bar">
+          <div class="header-title">
+            <h1 class="page-title" id="page-title-main">Dashboard</h1>
+            <p class="subtitle" id="page-subtitle-main">Overview of your synced Google Wallet transactions</p>
+          </div>
+          
+          <div class="header-actions">
+            <!-- Google Wallet Connection status badge -->
+            <div class="wallet-status-badge disconnected" id="wallet-status-indicator">
+              <div class="status-pulse"></div>
+              <i data-lucide="google"></i>
+              <span id="wallet-status-text">Google Wallet: Disconnected</span>
+            </div>
+            
+            <button class="btn btn-primary" id="btn-quick-add">
+              <i data-lucide="plus"></i>
+              <span>Add Expense</span>
+            </button>
+
+            <div class="user-profile">
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" alt="User avatar" class="avatar" />
+            </div>
+          </div>
+        </header>
+
+        <!-- Dynamic Panels -->
+        <div class="content-body">
+          
+          <!-- TAB: DASHBOARD -->
+          <section id="tab-dashboard" class="tab-panel active">
+            <!-- Grid of core metrics -->
+            <div class="stats-grid">
+              <div class="stat-card glass-panel">
+                <div class="stat-header">
+                  <span class="stat-label">Total Spends (Month)</span>
+                  <div class="stat-icon-wrapper color-purple">
+                    <i data-lucide="dollar-sign"></i>
+                  </div>
+                </div>
+                <div class="stat-value" id="stat-total-spent">$0.00</div>
+                <div class="stat-footer positive-trend">
+                  <i data-lucide="arrow-up-right"></i>
+                  <span><span id="stat-percentage-change">0%</span> from last month</span>
+                </div>
+              </div>
+
+              <div class="stat-card glass-panel">
+                <div class="stat-header">
+                  <span class="stat-label">Active Cards</span>
+                  <div class="stat-icon-wrapper color-blue">
+                    <i data-lucide="credit-card"></i>
+                  </div>
+                </div>
+                <div class="stat-value" id="stat-active-cards">0</div>
+                <div class="stat-footer">
+                  <span>Synced with Google Wallet</span>
+                </div>
+              </div>
+
+              <div class="stat-card glass-panel">
+                <div class="stat-header">
+                  <span class="stat-label">Google Wallet Sync Status</span>
+                  <div class="stat-icon-wrapper color-green">
+                    <i data-lucide="refresh-cw" id="sync-refresh-icon"></i>
+                  </div>
+                </div>
+                <div class="stat-value" id="stat-sync-status">Inactive</div>
+                <div class="stat-footer">
+                  <span id="stat-sync-last">No recent syncs</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Second Row: Chart & Dynamic Wallet Cards -->
+            <div class="dashboard-row">
+              <!-- Left: Doughnut Category breakdown & Card quick spent -->
+              <div class="dashboard-col col-left glass-panel">
+                <div class="col-header">
+                  <h2>Spending Breakdown</h2>
+                  <span class="header-action-text" id="btn-view-analytics-shortcut">Full Reports</span>
+                </div>
+                <div class="chart-container doughnut-wrapper">
+                  <canvas id="chart-categories-donut"></canvas>
+                  <div class="chart-center-info">
+                    <span class="center-label">Transactions</span>
+                    <span class="center-value" id="donut-total-count">0</span>
+                  </div>
+                </div>
+                <!-- Dynamic categories list with color coded progress bars -->
+                <div class="category-breakdown-list" id="category-progress-list">
+                  <!-- JS generated list items -->
+                </div>
+              </div>
+
+              <!-- Right: Card carousel/grid & Interactive connection status -->
+              <div class="dashboard-col col-right glass-panel">
+                <div class="col-header">
+                  <h2>My Linked Cards</h2>
+                  <button class="btn btn-secondary btn-sm" id="btn-sync-wallet-shortcut">
+                    <i data-lucide="link"></i>
+                    <span>Connect Google Wallet</span>
+                  </button>
+                </div>
+                
+                <!-- Horizontal list of customized premium cards -->
+                <div class="cards-preview-scroll" id="cards-scroll-container">
+                  <!-- Cards dynamically inserted by JS -->
+                </div>
+
+                <!-- Action section to encourage simulator -->
+                <div class="simulator-promo-box">
+                  <div class="promo-content">
+                    <h3>Simulate Real-time Wallet Payments</h3>
+                    <p>Want to see Google Wallet auto-sync in action? Tap your phone at our simulated merchant terminals!</p>
+                  </div>
+                  <button class="btn btn-accent btn-sm" id="btn-goto-simulator">
+                    <span>Open Simulator</span>
+                    <i data-lucide="arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Third Row: Recent Transactions Ledger -->
+            <div class="dashboard-ledger glass-panel">
+              <div class="ledger-header">
+                <h2>Recent Purchases</h2>
+                <div class="ledger-actions">
+                  <div class="search-box">
+                    <i data-lucide="search"></i>
+                    <input type="text" placeholder="Search merchants..." id="input-search-transactions">
+                  </div>
+                  <select class="select-filter" id="select-filter-category">
+                    <option value="">All Categories</option>
+                    <option value="Dining">Dining</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Bills">Bills & Services</option>
+                    <option value="Groceries">Groceries</option>
+                    <option value="Travel">Travel</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-wrapper">
+                <table class="ledger-table" id="table-recent-transactions">
+                  <thead>
+                    <tr>
+                      <th>Merchant / Transaction</th>
+                      <th>Category</th>
+                      <th>Card Used</th>
+                      <th>Date</th>
+                      <th class="text-right">Amount</th>
+                      <th class="text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactions-tbody">
+                    <!-- Transactions dynamically populated here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB: CARDS & WALLET -->
+          <section id="tab-wallet" class="tab-panel">
+            <div class="wallet-layout-grid">
+              
+              <!-- Cards Manager Panel (Left Column) -->
+              <div class="wallet-left-col glass-panel">
+                <div class="panel-header-with-action">
+                  <h2>Linked Payment Cards</h2>
+                  <button class="btn btn-secondary btn-sm" id="btn-add-card">
+                    <i data-lucide="plus"></i>
+                    <span>Add New Card</span>
+                  </button>
+                </div>
+                <p class="panel-desc">Manage credit and debit cards configured inside your Google Wallet. Auto-sync can be configured individually per card.</p>
+                
+                <div class="wallet-cards-grid" id="wallet-cards-detailed-list">
+                  <!-- Card cards dynamically populated -->
+                </div>
+              </div>
+
+              <!-- Google Wallet Connection Settings (Right Column) -->
+              <div class="wallet-right-col glass-panel">
+                <h2>Google Wallet Integration</h2>
+                <p class="panel-desc">Manage authentication and synchronization parameters with your Google account.</p>
+                
+                <div class="wallet-connection-panel" id="google-wallet-integration-box">
+                  <!-- Dynamic content based on wallet link status -->
+                  <div class="wallet-connection-status-card disconnected-state" id="wallet-card-disconnected-view">
+                    <div class="wallet-brand-logo-large">
+                      <div class="logo-wrapper-svg">
+                        <!-- Custom Google Wallet SVG styled logo -->
+                        <i data-lucide="wallet" class="wallet-large-icon"></i>
+                      </div>
+                      <h3>Google Wallet</h3>
+                    </div>
+                    <p class="integration-status-text">Your Google Wallet is currently <strong>not linked</strong>. Link your account to authorize automatic card spend importing.</p>
+                    <button class="btn btn-primary btn-block" id="btn-connect-wallet-action">
+                      <i data-lucide="link"></i>
+                      <span>Link Google Wallet Account</span>
+                    </button>
+                  </div>
+
+                  <div class="wallet-connection-status-card connected-state hidden" id="wallet-card-connected-view">
+                    <div class="wallet-brand-logo-large connected">
+                      <div class="logo-wrapper-svg">
+                        <i data-lucide="check-circle" class="wallet-large-icon-connected"></i>
+                      </div>
+                      <h3>Google Wallet Linked</h3>
+                    </div>
+                    <div class="connected-account-details">
+                      <div class="detail-row">
+                        <span class="detail-label">Connected Account:</span>
+                        <span class="detail-val" id="connected-account-email">user@gmail.com</span>
+                      </div>
+                      <div class="detail-row">
+                        <span class="detail-label">Last Synchronization:</span>
+                        <span class="detail-val" id="connected-account-last-sync">Just now</span>
+                      </div>
+                      <div class="detail-row">
+                        <span class="detail-label">Active Wallet Cards:</span>
+                        <span class="detail-val" id="connected-account-card-count">4 Cards</span>
+                      </div>
+                    </div>
+                    
+                    <div class="sync-settings-toggles">
+                      <h4>Auto-Sync Configurations</h4>
+                      <label class="toggle-switch">
+                        <input type="checkbox" id="chk-auto-sync" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Sync automatically on payments</span>
+                      </label>
+                      <label class="toggle-switch">
+                        <input type="checkbox" id="chk-notify-sync" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Display browser notifications on sync</span>
+                      </label>
+                      <label class="toggle-switch">
+                        <input type="checkbox" id="chk-categorize-sync" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Auto-categorize transactions</span>
+                      </label>
+                    </div>
+
+                    <div class="wallet-action-buttons">
+                      <button class="btn btn-secondary" id="btn-sync-now">
+                        <i data-lucide="refresh-cw"></i>
+                        <span>Sync Now</span>
+                      </button>
+                      <button class="btn btn-danger-outline" id="btn-disconnect-wallet">
+                        <i data-lucide="link-2-off"></i>
+                        <span>Disconnect</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- TAB: ANALYTICS -->
+          <section id="tab-analytics" class="tab-panel">
+            <div class="analytics-layout-grid">
+              <!-- Left Chart: Main Trend -->
+              <div class="analytics-card glass-panel main-trend-card">
+                <div class="panel-header-with-action">
+                  <h2>Spending Trend</h2>
+                  <div class="btn-group">
+                    <button class="btn btn-secondary btn-sm active" id="btn-trend-month">This Month</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-trend-year">Yearly View</button>
+                  </div>
+                </div>
+                <div class="chart-container line-chart-wrapper">
+                  <canvas id="chart-spending-trend"></canvas>
+                </div>
+              </div>
+
+              <!-- Right Chart: Card distribution -->
+              <div class="analytics-card glass-panel card-distribution-card">
+                <h2>Card Spending Distribution</h2>
+                <p class="panel-desc">Comparison of total volume charged per card</p>
+                <div class="chart-container bar-chart-wrapper">
+                  <canvas id="chart-card-distribution"></canvas>
+                </div>
+              </div>
+
+              <!-- Stats & Tables -->
+              <div class="analytics-card glass-panel span-2-cols">
+                <div class="col-header">
+                  <h2>Expense Categories Detail</h2>
+                  <p class="panel-desc">In-depth tracking of category allowances and transaction frequencies</p>
+                </div>
+                
+                <div class="analytics-table-grid" id="analytics-categories-detailed-grid">
+                  <!-- Dynamically populated detail cards with category stats -->
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB: WALLET SIMULATOR -->
+          <section id="tab-simulator" class="tab-panel">
+            <div class="simulator-layout-grid">
+              
+              <!-- Left: Description and instructions -->
+              <div class="simulator-info glass-panel">
+                <h2>Google Wallet Simulation Terminal</h2>
+                <p class="panel-desc">Test real-time automatic transaction logging. Because financial APIs restrict direct connection, we created this sandbox to show how Google Wallet sync works.</p>
+                
+                <div class="simulator-guide-steps">
+                  <div class="guide-step">
+                    <div class="step-num">1</div>
+                    <div class="step-text"><strong>Link Google Wallet</strong> in the App (indicated by the top badge).</div>
+                  </div>
+                  <div class="guide-step">
+                    <div class="step-num">2</div>
+                    <div class="step-text">Select one of your digitized active cards from the virtual phone.</div>
+                  </div>
+                  <div class="guide-step">
+                    <div class="step-num">3</div>
+                    <div class="step-text">Choose a merchant, transaction amount, and category on the POS Terminal.</div>
+                  </div>
+                  <div class="guide-step">
+                    <div class="step-num">4</div>
+                    <div class="step-text">Click <strong>"Tap to Pay / Trigger Sync"</strong>.</div>
+                  </div>
+                  <div class="guide-step">
+                    <div class="step-num">5</div>
+                    <div class="step-text">Experience the NFC sound effect, notification banner, and instant chart sync!</div>
+                  </div>
+                </div>
+
+                <div class="simulator-log-console">
+                  <h3>Simulator System Console</h3>
+                  <div class="console-box" id="simulator-console-log">
+                    <div class="console-line system">[SYSTEM] Simulator initialized. Awaiting user tap...</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Visual Simulation Device & Terminal -->
+              <div class="simulator-workspace glass-panel">
+                
+                <!-- Phone Simulator -->
+                <div class="phone-mockup">
+                  <div class="phone-notch"></div>
+                  <div class="phone-screen">
+                    <div class="phone-header">
+                      <span class="phone-time">16:40</span>
+                      <div class="phone-icons">
+                        <i data-lucide="wifi"></i>
+                        <i data-lucide="battery"></i>
+                      </div>
+                    </div>
+
+                    <div class="phone-app-content">
+                      <div class="google-pay-logo">
+                        <i data-lucide="google" class="g-color"></i> <span>Wallet</span>
+                      </div>
+
+                      <div class="phone-cards-stack-wrapper">
+                        <div class="phone-card-preview-slider" id="phone-wallet-cards-list">
+                          <!-- Phone cards dynamic selection list -->
+                        </div>
+                      </div>
+
+                      <div class="phone-instruction">
+                        <i data-lucide="nfc" class="nfc-pulse-icon"></i>
+                        <p>Hold near terminal to pay</p>
+                        <span class="card-selected-name" id="selected-card-label">Visa ...4242</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- NFC Pulse Wave Effect -->
+                <div class="nfc-pulse-wave-connector">
+                  <div class="nfc-pulse-wave" id="nfc-pulse-wave-effect">
+                    <div class="circle circle-1"></div>
+                    <div class="circle circle-2"></div>
+                    <div class="circle circle-3"></div>
+                  </div>
+                </div>
+
+                <!-- POS Payment Terminal Simulator -->
+                <div class="pos-mockup">
+                  <div class="pos-screen-panel">
+                    <div class="pos-merchant-logo" id="pos-terminal-display-merchant">Starbucks Coffee</div>
+                    <div class="pos-amount-display" id="pos-terminal-display-amount">$4.75</div>
+                    <div class="pos-status-display" id="pos-terminal-status">READY TO TAP</div>
+                  </div>
+
+                  <div class="pos-controls">
+                    <div class="control-row">
+                      <label>Merchant</label>
+                      <select class="select-simulator-input" id="sim-input-merchant">
+                        <option value="Starbucks" data-amount="4.75" data-category="Dining">Starbucks Coffee</option>
+                        <option value="Uber" data-amount="18.30" data-category="Transport">Uber Ride</option>
+                        <option value="Target" data-amount="42.99" data-category="Shopping">Target Stores</option>
+                        <option value="Netflix" data-amount="15.49" data-category="Entertainment">Netflix Subscription</option>
+                        <option value="Chevron" data-amount="35.00" data-category="Transport">Chevron Fuel</option>
+                        <option value="Delta Air Lines" data-amount="249.50" data-category="Travel">Delta Air Lines</option>
+                        <option value="Whole Foods" data-amount="72.10" data-category="Groceries">Whole Foods</option>
+                        <option value="ConEd Utility" data-amount="112.40" data-category="Bills">ConEd Electricity</option>
+                      </select>
+                    </div>
+
+                    <div class="control-row-grid">
+                      <div class="control-subrow">
+                        <label>Amount ($)</label>
+                        <input type="number" step="0.01" class="select-simulator-input" id="sim-input-amount" value="4.75">
+                      </div>
+                      <div class="control-subrow">
+                        <label>Category</label>
+                        <select class="select-simulator-input" id="sim-input-category">
+                          <option value="Dining">Dining</option>
+                          <option value="Shopping">Shopping</option>
+                          <option value="Transport">Transport</option>
+                          <option value="Entertainment">Entertainment</option>
+                          <option value="Bills">Bills & Services</option>
+                          <option value="Groceries">Groceries</option>
+                          <option value="Travel">Travel</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <button class="btn btn-accent btn-block" id="btn-sim-tap-pay">
+                      <i data-lucide="nfc"></i>
+                      <span>Tap to Pay (Google Wallet)</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </section>
+
+        </div>
+      </main>
+
+      <!-- DIALOG MODAL: ADD MANUAL TRANSACTION -->
+      <div class="modal-backdrop hidden" id="modal-add-expense">
+        <div class="modal-content glass-panel">
+          <div class="modal-header">
+            <h3>Add Expense Manually</h3>
+            <button class="btn-close-modal" id="btn-close-expense-modal">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          
+          <form class="modal-form" id="form-add-expense">
+            <div class="form-group">
+              <label for="form-merchant">Merchant Name</label>
+              <input type="text" id="form-merchant" required placeholder="e.g. Amazon, Starbucks">
+            </div>
+
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="form-amount">Amount ($)</label>
+                <input type="number" step="0.01" min="0.01" id="form-amount" required placeholder="0.00">
+              </div>
+
+              <div class="form-group">
+                <label for="form-category">Category</label>
+                <select id="form-category" required>
+                  <option value="Dining">Dining</option>
+                  <option value="Shopping">Shopping</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Entertainment">Entertainment</option>
+                  <option value="Bills">Bills & Services</option>
+                  <option value="Groceries">Groceries</option>
+                  <option value="Travel">Travel</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="form-card">Payment Card</label>
+              <select id="form-card" required>
+                <!-- Filled dynamically by JS -->
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="form-date">Transaction Date</label>
+              <input type="date" id="form-date" required>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="btn-cancel-expense-modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Expense</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- DIALOG MODAL: MOCK GOOGLE OAUTH LINK -->
+      <div class="modal-backdrop hidden" id="modal-oauth-wallet">
+        <div class="modal-content oauth-modal glass-panel">
+          <div class="oauth-modal-header">
+            <div class="g-wallet-auth-logo">
+              <i data-lucide="google" class="g-color"></i>
+              <span>Sign in with Google</span>
+            </div>
+          </div>
+          
+          <div class="oauth-modal-body">
+            <p><strong>ApexWallet</strong> requests permission to link your Google Wallet account.</p>
+            <p class="oauth-disclosure">This will authorize ApexWallet to read card configurations, card identifiers (e.g. Visa ...4242), and register transaction triggers. It will <strong>never</strong> store your CVV, full card number, or bank credentials.</p>
+            
+            <div class="oauth-account-selector">
+              <div class="oauth-account-item active" id="oauth-opt-1">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" class="oauth-avatar" alt="Avatar">
+                <div class="oauth-account-info">
+                  <span class="account-name">Alex Mercer</span>
+                  <span class="account-email">alex.mercer@gmail.com</span>
+                </div>
+                <i data-lucide="check" class="check-icon"></i>
+              </div>
+            </div>
+
+            <div class="oauth-permissions-box">
+              <h4>Allow ApexWallet to:</h4>
+              <ul>
+                <li>
+                  <i data-lucide="check-square" class="color-green-icon"></i>
+                  <span>View tokens and card structures stored in Google Wallet</span>
+                </li>
+                <li>
+                  <i data-lucide="check-square" class="color-green-icon"></i>
+                  <span>Receive payment event notifications when cards are tapped</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-secondary" id="btn-oauth-deny">Cancel</button>
+            <button class="btn btn-primary" id="btn-oauth-approve">Allow Access</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIALOG MODAL: ADD CUSTOM CARD -->
+      <div class="modal-backdrop hidden" id="modal-add-card">
+        <div class="modal-content glass-panel">
+          <div class="modal-header">
+            <h3>Add New Payment Card</h3>
+            <button class="btn-close-modal" id="btn-close-card-modal">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          
+          <form class="modal-form" id="form-add-card">
+            <div class="form-group">
+              <label for="form-card-name">Card Name / Label</label>
+              <input type="text" id="form-card-name" required placeholder="e.g. Chase Sapphire Reserve, Amex Gold">
+            </div>
+
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="form-card-brand">Card Issuer Network</label>
+                <select id="form-card-brand" required>
+                  <option value="visa">Visa</option>
+                  <option value="mastercard">Mastercard</option>
+                  <option value="amex">American Express</option>
+                  <option value="discover">Discover</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="form-card-last4">Last 4 Digits</label>
+                <input type="text" maxlength="4" minlength="4" pattern="\d{4}" id="form-card-last4" required placeholder="4242">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="form-card-color">Card Skin Theme</label>
+              <select id="form-card-color" required>
+                <option value="card-theme-blue">Deep Blue Metallic (Visa Sapphire Style)</option>
+                <option value="card-theme-gold">Gold Lustre (Amex Gold Style)</option>
+                <option value="card-theme-dark">Obsidian Matte (Amex Platinum Style)</option>
+                <option value="card-theme-purple">Aurora Neon Gradient (Premium Wave)</option>
+                <option value="card-theme-emerald">Emerald Foil (Rich Sage)</option>
+                <option value="card-theme-silver">Platinum Silver (Titanium Apple Style)</option>
+              </select>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="btn-cancel-card-modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Add Card</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Toast notifications container -->
+      <div class="toast-container" id="toast-notifications"></div>
+
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
