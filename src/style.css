@@ -2770,6 +2770,27 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   .wallet-brand-logo-large h3 {
     font-size: 18px;
   }
+
+  /* 9. Wrap linked card management rows to prevent right-edge cropping */
+  .card-manage-item {
+    flex-wrap: wrap;
+    padding: 14px;
+    gap: 12px 16px;
+  }
+
+  .card-manage-info {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  .card-manage-meta {
+    flex-wrap: wrap;
+  }
+
+  .card-manage-actions {
+    flex-basis: 100%;
+    justify-content: space-between;
+  }
 }
 
 
