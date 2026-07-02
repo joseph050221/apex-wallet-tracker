@@ -16,6 +16,7 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 import puppeteer from 'puppeteer';
+import { fileURLToPath } from 'url';
 import { generateMonthlyReportData } from '../src/reportLogic.js';
 import { buildReportHtmlDocument } from '../src/reportHtml.js';
 
@@ -161,7 +162,7 @@ async function main() {
 }
 
 // Only run when executed directly (not when imported, e.g. by tests)
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   main().catch(err => {
     console.error('Monthly report job failed:', err);
     process.exit(1);
