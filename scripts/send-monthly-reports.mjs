@@ -41,6 +41,56 @@ async function renderReportPdf(browser, report, year, month) {
   }
 }
 
+// Builds the email body HTML. Uses a table-based layout with inline styles
+// only (no flexbox/grid, no remote images) since email clients -- Outlook
+// in particular -- render HTML far less predictably than browsers and often
+// block remote images by default. The logo is a small CSS-styled letter
+// mark rather than an embedded SVG/image for the same reason.
+function buildReportEmailHtml(monthLabel) {
+  return `
+    <div style="background:#f1f5f9;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
+        <tr>
+          <td style="padding:28px 32px;border-bottom:1px solid #f1f5f9;">
+            <table role="presentation" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="width:40px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="38" height="38" style="background-color:#8b5cf6;background:linear-gradient(135deg,#8b5cf6,#a78bfa);border-radius:10px;">
+                    <tr><td align="center" valign="middle" style="width:38px;height:38px;color:#ffffff;font-size:18px;font-weight:800;font-family:Arial,Helvetica,sans-serif;">A</td></tr>
+                  </table>
+                </td>
+                <td style="padding-left:12px;font-size:21px;font-weight:800;letter-spacing:-0.3px;color:#0f172a;font-family:Arial,Helvetica,sans-serif;">
+                  Apex<span style="font-weight:500;color:#8b5cf6;">Wallet</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;color:#0f172a;font-size:14px;line-height:1.6;">
+            <p style="margin:0 0 16px;font-size:16px;font-weight:600;">Your ${monthLabel} report is ready</p>
+            <p style="margin:0 0 16px;color:#334155;">
+              Attached is a PDF with your full ${monthLabel} spending breakdown across all cards, including category and card charts plus a complete transaction log.
+            </p>
+            <p style="margin:0 0 24px;color:#334155;">
+              Thanks for using ApexWallet Tracker to stay on top of your spending.
+            </p>
+            <p style="margin:0;color:#0f172a;">
+              Best,<br>
+              <span style="font-weight:700;">The ApexWallet Team</span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #f1f5f9;color:#94a3b8;font-size:11px;line-height:1.6;">
+            You're receiving this because monthly email reports are enabled in your ApexWallet Tracker profile settings. Turn it off any time from Profile &amp; Settings.
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
 async function main() {
   const { year, month } = previousMonth();
   const monthLabel = `${MONTH_NAMES[month]} ${year}`;
@@ -80,12 +130,7 @@ async function main() {
           from: `"ApexWallet Tracker" <${process.env.GMAIL_USER}>`,
           to: data.userEmail,
           subject: `Your ${monthLabel} ApexWallet Report`,
-          html: `
-            <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
-              <p>Your ${monthLabel} spending report is attached as a PDF -- a full breakdown across all your cards, with category and card charts included.</p>
-              <p style="color:#94a3b8;font-size:11px;">You're receiving this because monthly email reports are enabled in your ApexWallet Tracker profile settings. Turn it off any time from Profile &amp; Settings.</p>
-            </div>
-          `,
+          html: buildReportEmailHtml(monthLabel),
           attachments: [{
             filename: `ApexWallet-Report-${monthLabel.replace(' ', '-')}.pdf`,
             content: pdfBuffer,
