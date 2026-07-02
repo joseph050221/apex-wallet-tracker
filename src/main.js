@@ -1128,6 +1128,7 @@ function openProfileModal() {
   populateBudgetsGrid('budgets-grid', store.categoryBudgets, 'budget-input');
   populateBudgetsGrid('business-budgets-grid', store.businessCategoryBudgets, 'business-budget-input');
   updateNotificationStatusUI();
+  document.getElementById('chk-monthly-report-optin').checked = !!store.settings.monthlyReportEmailOptIn;
 
   document.getElementById('modal-profile').classList.remove('hidden');
 }
@@ -1185,6 +1186,15 @@ function initProfileModal() {
 
   document.getElementById('btn-enable-notifications')?.addEventListener('click', () => {
     Notification.requestPermission().then(() => updateNotificationStatusUI());
+  });
+
+  document.getElementById('chk-monthly-report-optin')?.addEventListener('change', (e) => {
+    store.updateSettings({ monthlyReportEmailOptIn: e.target.checked });
+    toastManager.show(
+      'Preference Saved',
+      e.target.checked ? 'You\'ll receive a monthly report by email.' : 'Monthly email reports turned off.',
+      'info'
+    );
   });
 
   document.getElementById('btn-signout-from-profile')?.addEventListener('click', () => {
@@ -1461,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (user) {
       currentAuthUser = user;
-      await store.initForUser(user.uid);
+      await store.initForUser(user.uid, user.email);
       if (myGeneration !== authGeneration) return; // superseded by a newer auth event
 
       const emailEl = document.getElementById('sidebar-user-email');

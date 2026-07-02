@@ -1,0 +1,31 @@
+name: Send Monthly Reports
+
+on:
+  schedule:
+    # 13:00 UTC on the 1st of every month
+    - cron: '0 13 1 * *'
+  workflow_dispatch: {}
+    # Lets you trigger this manually from the Actions tab in GitHub, for
+    # testing -- Actions -> Send Monthly Reports -> Run workflow.
+
+jobs:
+  send-reports:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Send monthly report emails
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: node scripts/send-monthly-reports.mjs

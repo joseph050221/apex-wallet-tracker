@@ -4,6 +4,12 @@ import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase.js';
 import { CATEGORIES } from './categories.js';
 import { parseLocalDate } from './dateUtils.js';
+import {
+  getCardScope as getCardScopePure,
+  getCardsForScope as getCardsForScopePure,
+  getTransactionsForScope as getTransactionsForScopePure,
+  generateMonthlyReportData as generateMonthlyReportDataPure
+} from './reportLogic.js';
 
 const DEFAULT_BUDGETS = {
   Dining: 180,
@@ -18,12 +24,14 @@ const DEFAULT_BUDGETS = {
 const DEFAULT_SETTINGS = {
   theme: 'dark',
   sidebarCollapsed: false,
-  notify: true
+  notify: true,
+  monthlyReportEmailOptIn: false
 };
 
 class StateStore {
   constructor() {
     this.currentUid = null;
+    this.userEmail = '';
     this.ready = false;
     this.cards = [];
     this.transactions = [];
@@ -37,8 +45,7 @@ class StateStore {
   // Personal by default -- deleted/missing cards fall back to personal so
   // nothing silently disappears from a scoped view.
   getCardScope(cardId) {
-    const card = this.cards.find(c => c.id === cardId);
-    return (card && card.scope) || 'personal';
+    return getCardScopePure(this.cards, cardId);
   }
 
   // Subscribe to state updates
@@ -61,13 +68,17 @@ class StateStore {
       settings: this.settings,
       categoryBudgets: this.categoryBudgets,
       businessCategoryBudgets: this.businessCategoryBudgets,
-      customCategories: this.customCategories
+      customCategories: this.customCategories,
+      userEmail: this.userEmail
     };
   }
 
-  // Load (or seed) state for a newly authenticated user
-  async initForUser(uid) {
+  // Load (or seed) state for a newly authenticated user. `email` is stored
+  // alongside the data so the monthly report email script (which runs
+  // outside the browser, via Firebase Admin SDK) knows where to send it.
+  async initForUser(uid, email = '') {
     this.currentUid = uid;
+    this.userEmail = email;
     this.ready = false;
 
     try {
@@ -456,14 +467,12 @@ class StateStore {
 
   // Cards belonging to the given scope ('personal' | 'business' | 'all')
   getCardsForScope(scope = 'all') {
-    if (scope === 'all') return this.cards;
-    return this.cards.filter(c => (c.scope || 'personal') === scope);
+    return getCardsForScopePure(this.cards, scope);
   }
 
   // Transactions whose card belongs to the given scope ('personal' | 'business' | 'all')
   getTransactionsForScope(scope = 'all') {
-    if (scope === 'all') return this.transactions;
-    return this.transactions.filter(tx => this.getCardScope(tx.cardId) === scope);
+    return getTransactionsForScopePure(this.cards, this.transactions, scope);
   }
 
   // Get metrics and totals, optionally filtered to just Personal or Business cards
@@ -517,54 +526,9 @@ class StateStore {
   // (this is the actual point of it -- individual card statements only show
   // that one card; this shows everything together with each transaction's
   // card clearly attributed), optionally filtered to Personal or Business.
+  // Delegates to reportLogic.js, which is also used by the monthly email script.
   generateMonthlyReportData(year, month, scope = 'all') {
-    const cards = this.getCardsForScope(scope);
-    const cardIds = new Set(cards.map(c => c.id));
-
-    const monthTxs = this.getTransactionsForScope(scope).filter(tx => {
-      const d = parseLocalDate(tx.date);
-      return d.getFullYear() === year && d.getMonth() === month;
-    });
-
-    const purchases = monthTxs.filter(tx => tx.type !== 'payment');
-    const payments = monthTxs.filter(tx => tx.type === 'payment');
-
-    const totalSpent = purchases.reduce((sum, tx) => sum + tx.amount, 0);
-    const totalPayments = payments.reduce((sum, tx) => sum + tx.amount, 0);
-
-    // Group purchases by card, including cards with zero activity that month
-    // so the report shows a complete picture of every card in scope.
-    const cardBreakdown = cards.map(card => {
-      const cardTxs = purchases
-        .filter(tx => tx.cardId === card.id)
-        .sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date));
-      return {
-        card,
-        transactions: cardTxs,
-        subtotal: cardTxs.reduce((sum, tx) => sum + tx.amount, 0)
-      };
-    }).filter(entry => entry.transactions.length > 0);
-
-    // Purchases whose card was later deleted (cardId no longer resolves)
-    const unlinkedTransactions = purchases
-      .filter(tx => !tx.cardId || !cardIds.has(tx.cardId))
-      .sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date));
-
-    const categoryTotals = {};
-    purchases.forEach(tx => {
-      categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
-    });
-
-    return {
-      year,
-      month,
-      scope,
-      totalSpent,
-      totalPayments,
-      cardBreakdown,
-      unlinkedTransactions,
-      categoryTotals
-    };
+    return generateMonthlyReportDataPure(this.cards, this.transactions, year, month, scope);
   }
 }
 
