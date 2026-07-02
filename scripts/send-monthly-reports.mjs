@@ -105,7 +105,9 @@ async function main() {
     auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
   });
 
-  const usersSnapshot = await db.collection('users').get();
+  const usersSnapshot = await db.collection('users')
+    .where('settings.monthlyReportEmailOptIn', '==', true)
+    .get();
   let sent = 0;
   let skipped = 0;
   let failed = 0;
@@ -116,12 +118,18 @@ async function main() {
     for (const docSnap of usersSnapshot.docs) {
       const data = docSnap.data();
 
-      if (!data.settings?.monthlyReportEmailOptIn || !data.userEmail) {
+      if (!data.userEmail) {
         skipped++;
         continue;
       }
 
-      const report = generateMonthlyReportData(data.cards || [], data.transactions || [], year, month, 'all');
+      const cardsSnapshot = await docSnap.ref.collection('cards').get();
+      const cards = cardsSnapshot.docs.map(d => d.data());
+
+      const transactionsSnapshot = await docSnap.ref.collection('transactions').get();
+      const transactions = transactionsSnapshot.docs.map(d => d.data());
+
+      const report = generateMonthlyReportData(cards, transactions, year, month, 'all');
 
       try {
         const pdfBuffer = await renderReportPdf(browser, report, year, month);

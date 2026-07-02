@@ -1,6 +1,6 @@
 // Application State Store with Firestore Persistence (per authenticated user)
 
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, collection, getDocs, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from './firebase.js';
 import { CATEGORIES } from './categories.js';
 import { parseLocalDate } from './dateUtils.js';
@@ -61,17 +61,47 @@ class StateStore {
     this.listeners.forEach(callback => callback(this));
   }
 
-  // Build the plain object shape persisted to Firestore
+  // Build the plain object shape persisted to Firestore (excludes sub-collections cards and transactions)
   _snapshotState() {
     return {
-      cards: this.cards,
-      transactions: this.transactions,
       settings: this.settings,
       categoryBudgets: this.categoryBudgets,
       businessCategoryBudgets: this.businessCategoryBudgets,
       customCategories: this.customCategories,
       userEmail: this.userEmail
     };
+  }
+
+  _saveCardDoc(card) {
+    if (this.currentUid) {
+      setDoc(doc(db, 'users', this.currentUid, 'cards', card.id), card).catch(e => {
+        console.error('Error writing card to Firestore', e);
+      });
+    }
+  }
+
+  _saveTransactionDoc(tx) {
+    if (this.currentUid) {
+      setDoc(doc(db, 'users', this.currentUid, 'transactions', tx.id), tx).catch(e => {
+        console.error('Error writing transaction to Firestore', e);
+      });
+    }
+  }
+
+  _deleteCardDoc(cardId) {
+    if (this.currentUid) {
+      deleteDoc(doc(db, 'users', this.currentUid, 'cards', cardId)).catch(e => {
+        console.error('Error deleting card from Firestore', e);
+      });
+    }
+  }
+
+  _deleteTransactionDoc(txId) {
+    if (this.currentUid) {
+      deleteDoc(doc(db, 'users', this.currentUid, 'transactions', txId)).catch(e => {
+        console.error('Error deleting transaction from Firestore', e);
+      });
+    }
   }
 
   // Load (or seed) state for a newly authenticated user. `email` is stored
@@ -86,23 +116,78 @@ class StateStore {
       const ref = doc(db, 'users', uid);
       const snap = await getDoc(ref);
 
+      let legacyCards = [];
+      let legacyTransactions = [];
+      let hasLegacyData = false;
+
       if (snap.exists()) {
         const data = snap.data();
-        this.cards = data.cards || [];
-        this.transactions = data.transactions || [];
+        
+        // Check for legacy fields
+        if (data.cards || data.transactions) {
+          legacyCards = data.cards || [];
+          legacyTransactions = data.transactions || [];
+          hasLegacyData = true;
+        }
+
         this.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
         this.categoryBudgets = data.categoryBudgets || { ...DEFAULT_BUDGETS };
         this.businessCategoryBudgets = data.businessCategoryBudgets || { ...DEFAULT_BUDGETS };
         this.customCategories = data.customCategories || [];
       } else {
         // First-ever login for this account: start with a clean slate
-        this.cards = [];
-        this.transactions = [];
         this.settings = { ...DEFAULT_SETTINGS };
         this.categoryBudgets = { ...DEFAULT_BUDGETS };
         this.businessCategoryBudgets = { ...DEFAULT_BUDGETS };
         this.customCategories = [];
         await setDoc(ref, this._snapshotState());
+      }
+
+      if (hasLegacyData) {
+        console.log('Migrating legacy data to Firestore sub-collections...');
+        this.cards = legacyCards;
+        this.transactions = legacyTransactions;
+
+        // Perform migration: write cards
+        for (const card of this.cards) {
+          await setDoc(doc(db, 'users', uid, 'cards', card.id), card);
+        }
+
+        // Write transactions in chunks of 400
+        const batchSize = 400;
+        for (let i = 0; i < this.transactions.length; i += batchSize) {
+          const chunk = this.transactions.slice(i, i + batchSize);
+          const batch = writeBatch(db);
+          for (const tx of chunk) {
+            batch.set(doc(db, 'users', uid, 'transactions', tx.id), tx);
+          }
+          await batch.commit();
+        }
+
+        // Remove legacy fields from main user doc
+        await setDoc(ref, {
+          ...this._snapshotState(),
+          cards: deleteField(),
+          transactions: deleteField()
+        }, { merge: true });
+
+        console.log('Legacy database migration completed successfully.');
+      } else {
+        // Load from sub-collections
+        const cardsSnap = await getDocs(collection(db, 'users', uid, 'cards'));
+        this.cards = [];
+        cardsSnap.forEach(doc => {
+          this.cards.push(doc.data());
+        });
+
+        const txsSnap = await getDocs(collection(db, 'users', uid, 'transactions'));
+        this.transactions = [];
+        txsSnap.forEach(doc => {
+          this.transactions.push(doc.data());
+        });
+        
+        // Sort transactions descending using lexicographical ID comparison
+        this.transactions.sort((a, b) => b.id.localeCompare(a.id));
       }
     } catch (e) {
       console.error('Error loading state from Firestore, using defaults.', e);
@@ -174,11 +259,25 @@ class StateStore {
 
     // === RUN SMART SPEND CHECKS ===
 
-    // 1. Check duplicate transaction (same merchant & amount within 10 minutes/transactions)
-    const duplicate = otherTxs.slice(0, 3).find(t =>
-      t.merchant.toLowerCase() === merchant.toLowerCase() &&
-      Math.abs(t.amount - numericAmount) < 0.01
-    );
+    // Helper to get creation timestamp from transaction ID
+    const getTxTimestamp = (txId) => {
+      const parts = (txId || '').split('-');
+      if (parts[0] === 'tx' && parts[1]) {
+        const ts = parseInt(parts[1], 10);
+        return isNaN(ts) ? 0 : ts;
+      }
+      return 0;
+    };
+
+    // 1. Check duplicate transaction (same merchant & amount within 10 minutes)
+    const newTxTime = Date.now();
+    const duplicate = otherTxs.find(t => {
+      const tTime = getTxTimestamp(t.id);
+      return tTime > 0 &&
+        Math.abs(newTxTime - tTime) < 10 * 60 * 1000 &&
+        t.merchant.toLowerCase() === merchant.toLowerCase() &&
+        Math.abs(t.amount - numericAmount) < 0.01;
+    });
     if (duplicate) {
       alerts.push({
         type: 'duplicate',
@@ -251,7 +350,11 @@ class StateStore {
       });
     }
 
-    this.saveState();
+    this._saveTransactionDoc(newTx);
+    if (card) {
+      this._saveCardDoc(card);
+    }
+    this.notifyListeners();
     return { transaction: newTx, alerts };
   }
 
@@ -281,7 +384,10 @@ class StateStore {
       newCard.balance += numericAmount;
     }
 
-    this.saveState();
+    this._saveTransactionDoc(tx);
+    if (oldCard) this._saveCardDoc(oldCard);
+    if (newCard && newCard !== oldCard) this._saveCardDoc(newCard);
+    this.notifyListeners();
     return true;
   }
 
@@ -294,6 +400,7 @@ class StateStore {
     let totalAdded = 0;
     let count = 0;
     let needsUncategorized = false;
+    const newTxs = [];
 
     rows.forEach(row => {
       const numericAmount = parseFloat(row.amount);
@@ -301,7 +408,7 @@ class StateStore {
 
       if (!row.category) needsUncategorized = true;
 
-      this.transactions.unshift({
+      const newTx = {
         id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
         merchant: row.merchant || 'Imported Transaction',
         amount: numericAmount,
@@ -309,8 +416,10 @@ class StateStore {
         cardId,
         date: row.date || new Date().toISOString().split('T')[0],
         source: 'Bank Import'
-      });
+      };
 
+      this.transactions.unshift(newTx);
+      newTxs.push(newTx);
       totalAdded += numericAmount;
       count++;
     });
@@ -326,6 +435,25 @@ class StateStore {
     if (card) card.balance += totalAdded;
 
     this.saveState();
+
+    if (this.currentUid) {
+      if (card) {
+        this._saveCardDoc(card);
+      }
+
+      const batchSize = 400;
+      for (let i = 0; i < newTxs.length; i += batchSize) {
+        const chunk = newTxs.slice(i, i + batchSize);
+        const batch = writeBatch(db);
+        for (const tx of chunk) {
+          batch.set(doc(db, 'users', this.currentUid, 'transactions', tx.id), tx);
+        }
+        batch.commit().catch(e => {
+          console.error('Error writing imported transactions batch to Firestore', e);
+        });
+      }
+    }
+
     return { count, totalAdded };
   }
 
@@ -352,7 +480,8 @@ class StateStore {
     };
 
     this.transactions.unshift(newTx);
-    this.saveState();
+    this._saveTransactionDoc(newTx);
+    this.notifyListeners();
     return newTx;
   }
 
@@ -369,7 +498,9 @@ class StateStore {
     }
 
     this.transactions.splice(txIndex, 1);
-    this.saveState();
+    this._deleteTransactionDoc(txId);
+    if (card) this._saveCardDoc(card);
+    this.notifyListeners();
     return true;
   }
 
@@ -387,7 +518,8 @@ class StateStore {
     };
 
     this.cards.push(newCard);
-    this.saveState();
+    this._saveCardDoc(newCard);
+    this.notifyListeners();
     return newCard;
   }
 
@@ -407,7 +539,8 @@ class StateStore {
       card.scope = scope === 'business' ? 'business' : 'personal';
     }
 
-    this.saveState();
+    this._saveCardDoc(card);
+    this.notifyListeners();
     return true;
   }
 
@@ -417,14 +550,32 @@ class StateStore {
     if (index === -1) return false;
 
     this.cards.splice(index, 1);
+    const unlinkedTxs = [];
     // Unlink transaction cards instead of deleting them to maintain ledger balance
     this.transactions.forEach(t => {
       if (t.cardId === cardId) {
         t.cardId = null;
+        unlinkedTxs.push(t);
       }
     });
 
-    this.saveState();
+    this._deleteCardDoc(cardId);
+
+    if (this.currentUid && unlinkedTxs.length > 0) {
+      const batchSize = 400;
+      for (let i = 0; i < unlinkedTxs.length; i += batchSize) {
+        const chunk = unlinkedTxs.slice(i, i + batchSize);
+        const batch = writeBatch(db);
+        for (const tx of chunk) {
+          batch.set(doc(db, 'users', this.currentUid, 'transactions', tx.id), tx);
+        }
+        batch.commit().catch(e => {
+          console.error('Error updating transactions in Firestore after card deletion', e);
+        });
+      }
+    }
+
+    this.notifyListeners();
     return true;
   }
 
@@ -460,10 +611,32 @@ class StateStore {
     return trimmed;
   }
 
-  // Permanently delete this account's Firestore document
+  // Permanently delete this account's Firestore document and all sub-collections
   async deleteAccountData() {
     if (!this.currentUid) return;
-    await deleteDoc(doc(db, 'users', this.currentUid));
+    const uid = this.currentUid;
+    
+    // Delete cards sub-collection documents
+    const cardsSnap = await getDocs(collection(db, 'users', uid, 'cards'));
+    for (const cardDoc of cardsSnap.docs) {
+      await deleteDoc(cardDoc.ref);
+    }
+    
+    // Delete transactions sub-collection documents
+    const txsSnap = await getDocs(collection(db, 'users', uid, 'transactions'));
+    const txDocs = txsSnap.docs;
+    const batchSize = 400;
+    for (let i = 0; i < txDocs.length; i += batchSize) {
+      const chunk = txDocs.slice(i, i + batchSize);
+      const batch = writeBatch(db);
+      for (const txDoc of chunk) {
+        batch.delete(txDoc.ref);
+      }
+      await batch.commit();
+    }
+    
+    // Delete main user document
+    await deleteDoc(doc(db, 'users', uid));
   }
 
   // Cards belonging to the given scope ('personal' | 'business' | 'all')
