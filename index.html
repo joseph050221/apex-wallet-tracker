@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons Script -->
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-DGVxU5mz.js"></script>
+    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-BLdZi9le.js"></script>
     <link rel="stylesheet" crossorigin href="/apex-wallet-tracker/assets/index-fiXtqiVR.css">
   </head>
   <body class="dark-theme">
@@ -70,6 +70,10 @@
         <!-- Signup Panel -->
         <div id="auth-panel-signup" class="hidden">
           <form class="modal-form" id="form-signup">
+            <div class="form-group">
+              <label for="signup-name">Full Name</label>
+              <input type="text" id="signup-name" required placeholder="John Doe">
+            </div>
             <div class="form-group">
               <label for="signup-email">Email Address</label>
               <input type="email" id="signup-email" required placeholder="you@example.com">
@@ -226,6 +230,7 @@
 
           <!-- TAB: DASHBOARD -->
           <section id="tab-dashboard" class="tab-panel active">
+            <h2 id="dashboard-welcome-greeting" class="welcome-greeting" style="font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">Welcome!</h2>
             <!-- Grid of core metrics -->
             <div class="stats-grid">
               <div class="stat-card glass-panel">
@@ -736,6 +741,15 @@
               <div>
                 <div class="profile-email" id="profile-email">—</div>
                 <div class="profile-joined" id="profile-joined">—</div>
+              </div>
+            </div>
+
+            <div class="profile-section">
+              <h4>Display Name</h4>
+              <p class="panel-desc">Customize your username for headings and notifications.</p>
+              <div class="form-group" style="display: flex; gap: 10px; margin-top: 8px;">
+                <input type="text" id="profile-name-input" placeholder="Your name" style="flex-grow: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: #fff;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-save-profile-name" style="margin-top: 0;">Save Name</button>
               </div>
             </div>
 
