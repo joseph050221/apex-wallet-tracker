@@ -26,7 +26,7 @@ function redactSensitiveLines(lines) {
 function sanitizeCsvResponse(text) {
   const withoutFences = text.replace(/```[a-z]*\n?/gi, '');
   const lines = withoutFences.split('\n');
-  const headerIdx = lines.findIndex(l => /^date\s*,\s*description\s*,\s*amount/i.test(l.trim()));
+  const headerIdx = lines.findIndex(l => /^date\s*,\s*description\s*,\s*debit/i.test(l.trim()));
   if (headerIdx === -1) return withoutFences.trim();
   return lines.slice(headerIdx).join('\n').trim();
 }
@@ -38,11 +38,11 @@ async function callClaude(lines, apiKey) {
 
 Output rules (follow exactly, even if the source statement uses different conventions):
 - Output ONLY plain CSV text. No explanation, no notes, no markdown code fences (no \`\`\`), nothing before or after the CSV.
-- The first line must be exactly: Date,Description,Amount
+- The first line must be exactly: Date,Description,Debit
 - Use a comma (,) as the field separator, never a semicolon.
 - Use a period (.) as the decimal separator, never a comma (e.g. 12.50, not 12,50).
 - Date format: YYYY-MM-DD (convert from whatever format the source uses).
-- Amount: positive number only, no currency symbol, no thousands separator.
+- Debit: a positive number for every expense/purchase, no currency symbol, no thousands separator.
 - Description: translate or keep the original merchant text, but strip commas from it so it doesn't break CSV columns.
 - One row per expense/purchase transaction. Skip deposits, payments received, credits, refunds, and non-transaction lines (headers, totals, balances, account info).
 
