@@ -131,7 +131,7 @@ export function parseCsvTransactions(text) {
 
 // Reconstructs visual text lines from a PDF page's text items by grouping
 // items with similar vertical position, sorted left-to-right within a line.
-async function extractPdfLines(file) {
+export async function extractPdfLines(file) {
   const pdfjsLib = await import('pdfjs-dist');
   const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;

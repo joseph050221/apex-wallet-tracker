@@ -426,7 +426,7 @@
           </div>
 
           <div class="modal-form">
-            <p class="panel-desc">Upload a CSV or PDF bank/credit-card statement. Everything is parsed right here in your browser — nothing is uploaded anywhere. We only import expenses (deposits/credits are skipped), and you can remove any row before confirming.</p>
+            <p class="panel-desc">Upload a CSV or PDF bank/credit-card statement. By default, everything is parsed right here in your browser — nothing is uploaded anywhere. We only import expenses (deposits/credits are skipped), and you can remove any row before confirming. If the built-in PDF parser can't read a statement, you can optionally use your own AI API key (set up in Profile &amp; Settings) — only the extracted text is sent, directly to your own AI account.</p>
 
             <div class="form-group">
               <label for="import-card-select">Which card is this statement for?</label>
@@ -439,10 +439,13 @@
             </div>
 
             <p class="auth-error-text hidden" id="import-error-text"></p>
+            <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-try-ai-import">
+              <i data-lucide="sparkles"></i> Try AI-Powered Parsing
+            </button>
             <p class="import-status-text hidden" id="import-status-text">Parsing file...</p>
             <p class="import-pdf-warning hidden" id="import-pdf-warning">
               <i data-lucide="alert-triangle"></i>
-              PDF parsing is best-effort — statement layouts vary a lot. Please review the rows below before importing.
+              <span id="import-pdf-warning-text">PDF parsing is best-effort — statement layouts vary a lot. Please review the rows below before importing.</span>
             </p>
 
             <div class="import-preview hidden" id="import-preview">
@@ -621,6 +624,21 @@
                 <!-- JS generated: one input per category -->
               </div>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-save-business-budgets">Save Business Budgets</button>
+            </div>
+
+            <div class="profile-section">
+              <h4>AI-Powered PDF Import</h4>
+              <p class="panel-desc">Add your own Anthropic (Claude) API key to let AI read bank statement PDFs the built-in parser can't handle. Your key is stored only on this device — never synced to our servers — and is used to call Anthropic's API directly from your browser, billed to your own account.</p>
+              <p class="panel-desc" id="ai-key-status-text">No key saved yet.</p>
+              <div class="form-group">
+                <label for="input-ai-api-key">Anthropic API Key</label>
+                <input type="password" id="input-ai-api-key" placeholder="sk-ant-...">
+              </div>
+              <div class="inline-btn-group">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-save-ai-key">Save Key</button>
+                <button type="button" class="btn btn-danger-outline btn-sm" id="btn-clear-ai-key">Remove Key</button>
+              </div>
+              <p class="panel-desc">Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Usage is billed by Anthropic directly to you — typically a fraction of a cent per statement.</p>
             </div>
 
             <div class="profile-section">

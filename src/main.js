@@ -17,6 +17,8 @@ import {
 } from './auth.js';
 import { CATEGORIES, getCategoryColor, getCategoryLabel, hexToRgba } from './categories.js';
 import { parseImportFile } from './import.js';
+import { parsePdfTransactionsWithAI } from './aiImport.js';
+import { getAiApiKey, setAiApiKey } from './aiKey.js';
 import { parseLocalDate } from './dateUtils.js';
 import { buildReportHtmlDocument } from './reportHtml.js';
 
@@ -858,20 +860,27 @@ function initImportModal() {
   const btnClose = document.getElementById('btn-close-import-modal');
   const btnCancel = document.getElementById('btn-cancel-import-modal');
   const btnConfirm = document.getElementById('btn-confirm-import');
+  const btnTryAi = document.getElementById('btn-try-ai-import');
   const fileInput = document.getElementById('import-file-input');
   const cardSelect = document.getElementById('import-card-select');
   const errorText = document.getElementById('import-error-text');
   const statusText = document.getElementById('import-status-text');
   const pdfWarning = document.getElementById('import-pdf-warning');
+  const pdfWarningText = document.getElementById('import-pdf-warning-text');
+
+  let lastImportFile = null;
 
   const closeModal = () => modal.classList.add('hidden');
 
   const resetModal = () => {
     pendingImportRows = [];
+    lastImportFile = null;
     fileInput.value = '';
     errorText.classList.add('hidden');
     statusText.classList.add('hidden');
     pdfWarning.classList.add('hidden');
+    btnTryAi.classList.add('hidden');
+    btnTryAi.disabled = false;
     document.getElementById('import-preview').classList.add('hidden');
     btnConfirm.disabled = true;
   };
@@ -891,10 +900,13 @@ function initImportModal() {
     const file = fileInput.files[0];
     if (!file) return;
 
+    lastImportFile = file;
     pendingImportRows = [];
     errorText.classList.add('hidden');
     pdfWarning.classList.add('hidden');
+    btnTryAi.classList.add('hidden');
     document.getElementById('import-preview').classList.add('hidden');
+    statusText.textContent = 'Parsing file...';
     statusText.classList.remove('hidden');
     btnConfirm.disabled = true;
 
@@ -905,16 +917,61 @@ function initImportModal() {
       if (error) {
         errorText.textContent = error;
         errorText.classList.remove('hidden');
+        if (file.name.toLowerCase().endsWith('.pdf')) btnTryAi.classList.remove('hidden');
         return;
       }
 
       pendingImportRows = transactions;
-      if (bestEffort) pdfWarning.classList.remove('hidden');
+      if (bestEffort) {
+        pdfWarningText.textContent = 'PDF parsing is best-effort — statement layouts vary a lot. Please review the rows below before importing.';
+        pdfWarning.classList.remove('hidden');
+      }
       renderImportPreview();
     } catch (e) {
       console.error('Import parsing failed', e);
       statusText.classList.add('hidden');
       errorText.textContent = 'Something went wrong reading that file.';
+      errorText.classList.remove('hidden');
+      if (file.name.toLowerCase().endsWith('.pdf')) btnTryAi.classList.remove('hidden');
+    }
+  });
+
+  btnTryAi.addEventListener('click', async () => {
+    if (!lastImportFile) return;
+
+    const apiKey = getAiApiKey();
+    if (!apiKey) {
+      errorText.textContent = 'Add an Anthropic API key in Profile & Settings first, then try again.';
+      errorText.classList.remove('hidden');
+      return;
+    }
+
+    errorText.classList.add('hidden');
+    btnTryAi.disabled = true;
+    statusText.textContent = 'Asking AI to read the statement...';
+    statusText.classList.remove('hidden');
+
+    try {
+      const { transactions, error } = await parsePdfTransactionsWithAI(lastImportFile, apiKey);
+      statusText.classList.add('hidden');
+      btnTryAi.disabled = false;
+
+      if (error) {
+        errorText.textContent = error;
+        errorText.classList.remove('hidden');
+        return;
+      }
+
+      pendingImportRows = transactions;
+      pdfWarningText.textContent = 'Parsed with AI — please review the rows below before importing.';
+      pdfWarning.classList.remove('hidden');
+      btnTryAi.classList.add('hidden');
+      renderImportPreview();
+    } catch (e) {
+      console.error('AI import parsing failed', e);
+      statusText.classList.add('hidden');
+      btnTryAi.disabled = false;
+      errorText.textContent = e.message || 'AI parsing failed. Please try again.';
       errorText.classList.remove('hidden');
     }
   });
@@ -1075,6 +1132,11 @@ function openProfileModal() {
   updateNotificationStatusUI();
   document.getElementById('chk-monthly-report-optin').checked = !!store.settings.monthlyReportEmailOptIn;
 
+  document.getElementById('input-ai-api-key').value = '';
+  document.getElementById('ai-key-status-text').textContent = getAiApiKey()
+    ? 'A key is currently saved on this device.'
+    : 'No key saved yet.';
+
   document.getElementById('modal-profile').classList.remove('hidden');
 }
 
@@ -1131,6 +1193,25 @@ function initProfileModal() {
 
   document.getElementById('btn-enable-notifications')?.addEventListener('click', () => {
     Notification.requestPermission().then(() => updateNotificationStatusUI());
+  });
+
+  document.getElementById('btn-save-ai-key')?.addEventListener('click', () => {
+    const val = document.getElementById('input-ai-api-key').value.trim();
+    if (!val) {
+      toastManager.show('No Key Entered', 'Paste an API key first.', 'warning');
+      return;
+    }
+    setAiApiKey(val);
+    document.getElementById('input-ai-api-key').value = '';
+    document.getElementById('ai-key-status-text').textContent = 'A key is currently saved on this device.';
+    toastManager.show('Key Saved', 'Your API key is saved on this device only.', 'success');
+  });
+
+  document.getElementById('btn-clear-ai-key')?.addEventListener('click', () => {
+    setAiApiKey('');
+    document.getElementById('input-ai-api-key').value = '';
+    document.getElementById('ai-key-status-text').textContent = 'No key saved yet.';
+    toastManager.show('Key Removed', 'Your API key has been removed from this device.', 'info');
   });
 
   document.getElementById('chk-monthly-report-optin')?.addEventListener('change', (e) => {
