@@ -22,6 +22,14 @@ import { getAiApiKey, setAiApiKey } from './aiKey.js';
 import { parseLocalDate } from './dateUtils.js';
 import { buildReportHtmlDocument } from './reportHtml.js';
 
+// Robust HTML escaping to prevent XSS vulnerability in DOM insertions
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
 // Sentinel option value that triggers the "add a new category" prompt
 const ADD_NEW_CATEGORY_VALUE = '__add_new_category__';
 
@@ -58,8 +66,8 @@ const toastManager = {
         <i data-lucide="${iconName}"></i>
       </div>
       <div class="toast-details">
-        <div class="toast-title">${title}</div>
-        <div class="toast-msg">${message}</div>
+        <div class="toast-title">${escapeHtml(title)}</div>
+        <div class="toast-msg">${escapeHtml(message)}</div>
       </div>
       <button class="toast-close">
         <i data-lucide="x"></i>
@@ -317,20 +325,20 @@ function renderDashboardCards(cards) {
     cardEl.innerHTML = `
       <div class="card-top">
         <div class="card-top-left">
-          <span class="card-issuer">${card.name.split(' ')[0]}</span>
+          <span class="card-issuer">${escapeHtml(card.name.split(' ')[0])}</span>
           ${card.scope === 'business' ? '<span class="scope-badge business">Business</span>' : ''}
         </div>
         <div class="card-chip"></div>
       </div>
       <div class="card-middle">
-        <span class="card-number">•••• •••• •••• ${card.last4}</span>
+        <span class="card-number">•••• •••• •••• ${escapeHtml(card.last4)}</span>
       </div>
       <div class="card-bottom">
         <div class="card-holder">
           <span class="card-label">Card Brand</span>
-          <span class="card-name">${card.name}</span>
+          <span class="card-name">${escapeHtml(card.name)}</span>
         </div>
-        <span class="card-network-logo">${netLogo}</span>
+        <span class="card-network-logo">${escapeHtml(netLogo)}</span>
       </div>
 
       <div class="card-balance-overlay">
@@ -419,23 +427,23 @@ function renderTransactionsLedger() {
     tr.innerHTML = `
       <td>
         <div class="merchant-info">
-          <div class="merchant-icon">${tx.merchant[0].toUpperCase()}</div>
+          <div class="merchant-icon">${escapeHtml(tx.merchant[0].toUpperCase())}</div>
           <div class="merchant-details">
-            <span class="merchant-name">${tx.merchant}</span>
+            <span class="merchant-name">${escapeHtml(tx.merchant)}</span>
             <span class="tag-wallet-badge">
               <i data-lucide="${sourceIcon}"></i>
-              <span>${tx.source}</span>
+              <span>${escapeHtml(tx.source)}</span>
             </span>
           </div>
         </div>
       </td>
       <td>
-        <span class="badge-category" style="background-color: ${hexToRgba(catColor, 0.1)}; color: ${catColor};">${catLabel}</span>
+        <span class="badge-category" style="background-color: ${hexToRgba(catColor, 0.1)}; color: ${catColor};">${escapeHtml(catLabel)}</span>
       </td>
       <td>
         <div class="card-used-badge">
           <div class="card-indicator-dot" style="background-color: ${catColor};"></div>
-          <span>${cardLabel}</span>
+          <span>${escapeHtml(cardLabel)}</span>
         </div>
       </td>
       <td>${formattedDate}</td>
@@ -501,7 +509,7 @@ function renderCategoryProgressList(metrics) {
       <div class="category-item-meta">
         <span class="category-item-name">
           <span class="category-dot" style="background-color: ${catColor};"></span>
-          <span>${getCategoryLabel(catName)}</span>
+          <span>${escapeHtml(getCategoryLabel(catName))}</span>
           <span class="category-item-pct">${pct}%</span>
         </span>
         <span class="category-item-amount">$${amount.toFixed(2)}</span>
@@ -540,12 +548,12 @@ function renderWalletTabDetails(cards) {
 
     item.innerHTML = `
       <div class="card-manage-visual ${card.color}">
-        <span class="mini-network">${card.brand.toUpperCase()}</span>
-        <span class="mini-last4">•••• ${card.last4}</span>
+        <span class="mini-network">${escapeHtml(card.brand.toUpperCase())}</span>
+        <span class="mini-last4">•••• ${escapeHtml(card.last4)}</span>
       </div>
 
       <div class="card-manage-info">
-        <span class="card-manage-title">${card.name}${card.scope === 'business' ? ' <span class="scope-badge business">Business</span>' : ''}</span>
+        <span class="card-manage-title">${escapeHtml(card.name)}${card.scope === 'business' ? ' <span class="scope-badge business">Business</span>' : ''}</span>
         <div class="card-manage-meta">
           <span>Spent: <strong class="card-manage-spend">$${card.balance.toFixed(2)}</strong></span>
           ${card.limit > 0 ? `<span>Limit: $${card.limit.toLocaleString()} (${limitPct.toFixed(0)}%)</span>` : '<span>Limit: Uncapped</span>'}
@@ -672,7 +680,7 @@ function renderAnalyticsTrend(range = 'month') {
           <div class="cat-card-icon" style="background-color: ${catColor}; color:#fff;">
             <i data-lucide="${icon}"></i>
           </div>
-          <span>${getCategoryLabel(cat)}</span>
+          <span>${escapeHtml(getCategoryLabel(cat))}</span>
         </div>
         <span class="cat-stat-count">${count} txs</span>
       </div>
