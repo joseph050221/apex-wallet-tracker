@@ -5,14 +5,19 @@ import {
   GoogleAuthProvider,
   signOut,
   deleteUser,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendEmailVerification
 } from 'firebase/auth';
 import { auth } from './firebase.js';
 
 const googleProvider = new GoogleAuthProvider();
 
-export function signUp(email, password) {
-  return createUserWithEmailAndPassword(auth, email, password);
+export async function signUp(email, password) {
+  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  if (credential.user) {
+    await sendEmailVerification(credential.user);
+  }
+  return credential;
 }
 
 export function signIn(email, password) {

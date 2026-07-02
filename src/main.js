@@ -1556,12 +1556,36 @@ function bindAuthGateEvents() {
       return;
     }
 
-    signUp(email, password).catch(err => showAuthError('signup-error', authErrorMessage(err)));
+    signUp(email, password)
+      .then(() => {
+        resetAuthForms();
+        showAuthError('login-error', 'Account created! A verification link has been sent to your email. Please check your inbox.');
+      })
+      .catch(err => showAuthError('signup-error', authErrorMessage(err)));
   });
 
   document.getElementById('btn-google-signin')?.addEventListener('click', () => {
     hideAuthErrors();
     signInWithGoogle().catch(err => showAuthError('login-error', authErrorMessage(err)));
+  });
+
+  // Password Show/Hide Toggle click listeners
+  document.querySelectorAll('.btn-toggle-password').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const targetId = btn.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      if (!input) return;
+
+      const isPass = input.type === 'password';
+      input.type = isPass ? 'text' : 'password';
+
+      const icon = btn.querySelector('i');
+      if (icon) {
+        icon.setAttribute('data-lucide', isPass ? 'eye-off' : 'eye');
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
   });
 }
 
@@ -1604,6 +1628,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const myGeneration = ++authGeneration;
 
     if (user) {
+      // Gate email verification (Google Auth accounts are verified by default)
+      if (!user.emailVerified) {
+        signOutUser();
+        // Only override if the message isn't already set to the registration success screen
+        const errEl = document.getElementById('login-error');
+        if (errEl && !errEl.textContent.includes('Account created!')) {
+          showAuthError('login-error', 'Please verify your email address. We sent a verification link to your inbox.');
+        }
+        return;
+      }
+
       currentAuthUser = user;
       await store.initForUser(user.uid, user.email);
       if (myGeneration !== authGeneration) return; // superseded by a newer auth event
