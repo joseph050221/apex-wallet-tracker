@@ -33,7 +33,8 @@ const DEFAULT_SETTINGS = {
 const DEVELOPER_EMAILS = [
   'admin@apexwallet.com',
   'joseph050221@gmail.com',
-  'luffy@example.com'
+  'luffy@example.com',
+  'josephzhangce0221@gmail.com'
 ];
 
 class StateStore {
