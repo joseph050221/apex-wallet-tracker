@@ -1737,6 +1737,12 @@ Rule: Keep your responses highly concise, practical, and structured. Do not use 
       });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('Your API key was rejected. Please check your Anthropic API key in Profile & Settings.');
+        }
+        if (res.status === 429) {
+          throw new Error('Rate limited by Anthropic. Please wait a moment and try again.');
+        }
         throw new Error(`AI request failed (status ${res.status}).`);
       }
 
