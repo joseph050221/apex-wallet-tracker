@@ -214,6 +214,8 @@ function initTabNavigation() {
       // Refresh layout-specific actions
       if (tab === 'analytics') {
         renderAnalyticsTrend(currentTrendRange);
+      } else if (tab === 'dev') {
+        loadDeveloperUserDirectory();
       }
     });
   });
@@ -2043,6 +2045,66 @@ function updateDevConsoleUI() {
       businessCategoryBudgets: store.businessCategoryBudgets,
       customCategories: store.customCategories
     }, null, 2);
+  }
+}
+
+// Developer Console: Fetch and render all user profiles securely in the UI
+async function loadDeveloperUserDirectory() {
+  const container = document.getElementById('dev-user-list-body');
+  const countEl = document.getElementById('dev-user-count');
+  if (!container) return;
+
+  container.innerHTML = `
+    <tr>
+      <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-secondary);">
+        <div class="loading-spinner" style="margin: 0 auto 8px; width: 24px; height: 24px;"></div>
+        <div>Retrieving registered users...</div>
+      </td>
+    </tr>
+  `;
+
+  try {
+    const users = await store.fetchAllUsers();
+    if (countEl) countEl.textContent = users.length;
+
+    if (users.length === 0) {
+      container.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-secondary);">No user records found in Firestore.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    // Render user profile rows
+    container.innerHTML = users.map(user => {
+      const settings = user.settings || {};
+      const name = settings.fullName || '<Not Configured>';
+      const email = user.userEmail || '<Google Auth / No Email>';
+      const uid = user.uid;
+      const welcomeSent = settings.welcomeEmailSent ? '✅ Yes' : '❌ No';
+      const reportOptIn = settings.monthlyReportEmailOptIn ? '📧 Yes' : '🔕 No';
+
+      return `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;">
+          <td style="padding: 12px 8px; font-weight: 500;">${escapeHtml(name)}</td>
+          <td style="padding: 12px 8px; font-family: monospace;">${escapeHtml(email)}</td>
+          <td style="padding: 12px 8px; font-family: monospace; font-size: 11px; color: var(--text-secondary); word-break: break-all;">${uid}</td>
+          <td style="padding: 12px 8px; text-align: center;">${welcomeSent}</td>
+          <td style="padding: 12px 8px; text-align: center;">${reportOptIn}</td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Failed to load user directory:', err);
+    container.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 24px; color: var(--danger);">
+          Failed to fetch user directory. Make sure firestore.rules has been updated to authorize read access.
+          <br><small style="font-family: monospace; opacity: 0.8;">${escapeHtml(err.message || '')}</small>
+        </td>
+      </tr>
+    `;
   }
 }
 

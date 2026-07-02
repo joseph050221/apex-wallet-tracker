@@ -454,7 +454,7 @@
 
           <!-- TAB: DEVELOPER CONSOLE -->
           <section id="tab-dev" class="tab-panel">
-            <div class="dev-layout glass-panel" style="padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; min-height: 500px;">
+            <div class="dev-layout glass-panel" style="padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; min-height: 500px; margin-bottom: 24px;">
               <!-- Left: System Info & Sandbox -->
               <div class="dev-left-col" style="display: flex; flex-direction: column; gap: 20px;">
                 <div class="col-header">
@@ -493,6 +493,38 @@
                 <div class="code-viewport" style="flex: 1; max-height: 400px; overflow-y: auto; background: #000; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
                   <pre id="dev-state-json" style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #38bdf8; word-break: break-all; white-space: pre-wrap;"></pre>
                 </div>
+              </div>
+            </div>
+
+            <!-- User Directory Panel -->
+            <div class="glass-panel" style="padding: 24px;">
+              <div class="col-header" style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;">Registered Users & Profiles</h3>
+                  <p class="panel-desc" style="margin: 4px 0 0;">Inspect user settings documents, email report statuses, and registered display names.</p>
+                </div>
+                <div style="font-size: 13px; color: var(--text-secondary);">
+                  Total Users: <strong id="dev-user-count" style="color: var(--accent); font-size: 15px;">—</strong>
+                </div>
+              </div>
+              
+              <div style="overflow-x: auto;">
+                <table class="ledger-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                  <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">
+                      <th style="padding: 12px 8px;">Display Name</th>
+                      <th style="padding: 12px 8px;">Email Address</th>
+                      <th style="padding: 12px 8px;">User UID</th>
+                      <th style="padding: 12px 8px; text-align: center;">Welcome Sent</th>
+                      <th style="padding: 12px 8px; text-align: center;">Report Opt-In</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dev-user-list-body">
+                    <tr>
+                      <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-secondary);">Loading registered users...</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </section>

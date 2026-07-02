@@ -755,6 +755,23 @@ class StateStore {
   generateMonthlyReportData(year, month, scope = 'all') {
     return generateMonthlyReportDataPure(this.cards, this.transactions, year, month, scope);
   }
+
+  // Developer feature: Fetch all user profiles from the users collection.
+  // Securely restricted by Firestore Security Rules to only allow the developer.
+  async fetchAllUsers() {
+    try {
+      const colRef = collection(db, 'users');
+      this.readCount++;
+      const snap = await getDocs(colRef);
+      return snap.docs.map(doc => ({
+        uid: doc.id,
+        ...doc.data()
+      }));
+    } catch (err) {
+      console.error('Error fetching all users from Firestore:', err);
+      throw err;
+    }
+  }
 }
 
 export const store = new StateStore();
