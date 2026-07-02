@@ -1248,7 +1248,9 @@ function initProfileModal() {
   });
 
   document.getElementById('btn-signout-from-profile')?.addEventListener('click', () => {
-    signOutUser();
+    if (confirm('Are you sure you want to log out?')) {
+      signOutUser();
+    }
   });
 
   document.getElementById('btn-delete-account')?.addEventListener('click', async () => {
@@ -1422,7 +1424,9 @@ function bindSidebarToggle() {
 // LOGOUT BUTTON
 function bindLogoutButton() {
   document.getElementById('btn-logout')?.addEventListener('click', () => {
-    signOutUser();
+    if (confirm('Are you sure you want to log out?')) {
+      signOutUser();
+    }
   });
 }
 
