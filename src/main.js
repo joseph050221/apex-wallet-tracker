@@ -1607,6 +1607,13 @@ function bindAuthGateEvents() {
       await resendVerificationEmail();
       toastManager.show('Email Sent', 'A fresh verification link has been sent to your email.', 'success');
 
+      // Display status text directly under the buttons in the panel
+      const statusEl = document.getElementById('verify-success-msg');
+      if (statusEl && currentAuthUser) {
+        statusEl.textContent = `Verification link has been sent to ${currentAuthUser.email}`;
+        statusEl.classList.remove('hidden');
+      }
+
       let cooldown = 60;
       const interval = setInterval(() => {
         cooldown--;
@@ -1633,6 +1640,13 @@ function resetAuthForms() {
   document.getElementById('auth-panel-signup')?.classList.add('hidden');
   document.getElementById('auth-panel-verify')?.classList.add('hidden');
   document.getElementById('auth-panel-login')?.classList.remove('hidden');
+
+  // Clear verification status text
+  const statusEl = document.getElementById('verify-success-msg');
+  if (statusEl) {
+    statusEl.textContent = '';
+    statusEl.classList.add('hidden');
+  }
 }
 
 // VISIBILITY HELPERS
