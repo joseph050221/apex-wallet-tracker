@@ -1631,6 +1631,25 @@ function bindAuthGateEvents() {
       toastManager.show('Send Failed', err.message || 'Could not resend email.', 'warning');
     }
   });
+
+  // Authorized staging bypass click handler using a secret prompt
+  document.getElementById('link-bypass-verification')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const code = prompt('Enter developer bypass passphrase to verify this account:');
+    if (code === 'APEXDEV') {
+      if (currentAuthUser) {
+        sessionStorage.setItem('email_verified_bypass_' + currentAuthUser.uid, 'true');
+        toastManager.show('Verification Bypassed', 'Reloading app...', 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        toastManager.show('Bypass Failed', 'No active login session found.', 'warning');
+      }
+    } else if (code !== null) {
+      toastManager.show('Access Denied', 'Invalid passphrase.', 'warning');
+    }
+  });
 }
 
 function resetAuthForms() {
@@ -1694,8 +1713,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Developer bypass: whitelisted admin accounts are exempt from verification checks to ease testing
       const devEmails = ['admin@apexwallet.com', 'joseph050221@gmail.com', 'luffy@example.com', 'josephzhangce0221@gmail.com'];
       const isDeveloperEmail = user.email && devEmails.includes(user.email.toLowerCase());
+      const isBypassed = sessionStorage.getItem('email_verified_bypass_' + user.uid) === 'true';
 
-      if (!user.emailVerified && !isDeveloperEmail) {
+      if (!user.emailVerified && !isDeveloperEmail && !isBypassed) {
         currentAuthUser = user;
         const displayEl = document.getElementById('verify-email-display');
         if (displayEl) displayEl.textContent = user.email || '';
