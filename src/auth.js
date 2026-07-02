@@ -29,6 +29,17 @@ export function signIn(email, password) {
   return signInWithEmailAndPassword(auth, email, password);
 }
 
+export function resendVerificationEmail() {
+  if (auth.currentUser) {
+    const actionCodeSettings = {
+      url: window.location.origin + window.location.pathname,
+      handleCodeInApp: false
+    };
+    return sendEmailVerification(auth.currentUser, actionCodeSettings);
+  }
+  return Promise.reject(new Error('No authenticated user session found.'));
+}
+
 export function signInWithGoogle() {
   return signInWithPopup(auth, googleProvider);
 }

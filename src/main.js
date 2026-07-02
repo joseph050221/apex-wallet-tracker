@@ -13,7 +13,8 @@ import {
   signOutUser,
   deleteAccount,
   onAuthChange,
-  authErrorMessage
+  authErrorMessage,
+  resendVerificationEmail
 } from './auth.js';
 import { CATEGORIES, getCategoryColor, getCategoryLabel, hexToRgba } from './categories.js';
 import { parseImportFile } from './import.js';
@@ -1587,6 +1588,42 @@ function bindAuthGateEvents() {
       }
     });
   });
+
+  // Cancel Verification button (sign out and return to login screen)
+  document.getElementById('btn-cancel-verification')?.addEventListener('click', () => {
+    signOutUser();
+  });
+
+  // Resend verification link with 60s rate limit cooldown
+  document.getElementById('btn-resend-verification')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-resend-verification');
+    if (!btn || btn.disabled) return;
+
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = 'Sending...';
+
+    try {
+      await resendVerificationEmail();
+      toastManager.show('Email Sent', 'A fresh verification link has been sent to your email.', 'success');
+
+      let cooldown = 60;
+      const interval = setInterval(() => {
+        cooldown--;
+        if (cooldown <= 0) {
+          clearInterval(interval);
+          btn.disabled = false;
+          btn.textContent = oldText;
+        } else {
+          btn.textContent = `Resend in ${cooldown}s`;
+        }
+      }, 1000);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = oldText;
+      toastManager.show('Send Failed', err.message || 'Could not resend email.', 'warning');
+    }
+  });
 }
 
 function resetAuthForms() {
@@ -1594,6 +1631,7 @@ function resetAuthForms() {
   document.getElementById('form-signup')?.reset();
   hideAuthErrors();
   document.getElementById('auth-panel-signup')?.classList.add('hidden');
+  document.getElementById('auth-panel-verify')?.classList.add('hidden');
   document.getElementById('auth-panel-login')?.classList.remove('hidden');
 }
 
@@ -1630,12 +1668,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (user) {
       // Gate email verification (Google Auth accounts are verified by default)
       if (!user.emailVerified) {
-        signOutUser();
-        // Only override if the message isn't already set to the registration success screen
-        const errEl = document.getElementById('login-error');
-        if (errEl && !errEl.textContent.includes('Account created!')) {
-          showAuthError('login-error', 'Please verify your email address. We sent a verification link to your inbox.');
-        }
+        currentAuthUser = user;
+        const displayEl = document.getElementById('verify-email-display');
+        if (displayEl) displayEl.textContent = user.email || '';
+
+        // Show the verification screen and hide standard login panels
+        document.getElementById('auth-panel-login')?.classList.add('hidden');
+        document.getElementById('auth-panel-signup')?.classList.add('hidden');
+        document.getElementById('auth-panel-verify')?.classList.remove('hidden');
+
+        showAuthGate();
         return;
       }
 
