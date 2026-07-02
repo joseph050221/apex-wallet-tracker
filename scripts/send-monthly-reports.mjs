@@ -8,12 +8,9 @@
 //   FIREBASE_SERVICE_ACCOUNT  - JSON string of a Firebase service account key
 //   GMAIL_USER                - the sending Gmail address
 //   GMAIL_APP_PASSWORD        - a Gmail App Password (not the account password)
-//
-// Local test run (uses real credentials from your shell env, sends a real
-// email to REPORT_TEST_RECIPIENT instead of touching Firestore):
-//   REPORT_TEST_RECIPIENT=you@example.com node scripts/send-monthly-reports.mjs --dry-fixture
 
-import admin from 'firebase-admin';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 import { generateMonthlyReportData } from '../src/reportLogic.js';
 import { getCategoryLabel } from '../src/categories.js';
@@ -114,8 +111,8 @@ async function main() {
   console.log(`Generating reports for ${MONTH_NAMES[month]} ${year}...`);
 
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-  const db = admin.firestore();
+  const app = initializeApp({ credential: cert(serviceAccount) });
+  const db = getFirestore(app);
 
   const transporter = nodemailer.createTransport({
     service: 'gmail',
