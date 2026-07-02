@@ -30,6 +30,12 @@ const DEFAULT_SETTINGS = {
   welcomeEmailSent: false
 };
 
+const DEVELOPER_EMAILS = [
+  'admin@apexwallet.com',
+  'joseph050221@gmail.com',
+  'luffy@example.com'
+];
+
 class StateStore {
   constructor() {
     this.currentUid = null;
@@ -47,6 +53,10 @@ class StateStore {
     this.readCount = 0;
     this.writeCount = 0;
     this.simulatedLatency = false;
+  }
+
+  get isDeveloper() {
+    return DEVELOPER_EMAILS.map(e => e.toLowerCase()).includes((this.userEmail || '').toLowerCase());
   }
 
   // Personal by default -- deleted/missing cards fall back to personal so

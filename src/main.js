@@ -184,8 +184,12 @@ function initTabNavigation() {
   };
 
   navItems.forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
       const tab = item.getAttribute('data-tab');
+      if (tab === 'dev' && !store.isDeveloper) {
+        toastManager.show('Access Denied', 'The Developer Console is restricted to authorized administrators.', 'warning');
+        return;
+      }
 
       // Update Nav active indicator
       navItems.forEach(n => n.classList.remove('active'));
@@ -292,6 +296,16 @@ function renderAppUI() {
   renderDonutChart(metrics);
   renderTrendChart(txs, currentTrendRange);
   renderCardChart(cards, txs);
+
+  // Toggle Dev Console navigation button depending on Admin role whitelist
+  const btnNavDev = document.getElementById('btn-nav-dev');
+  if (btnNavDev) {
+    btnNavDev.classList.toggle('hidden', !store.isDeveloper);
+  }
+
+  if (document.getElementById('tab-dev')?.classList.contains('active') && !store.isDeveloper) {
+    document.getElementById('btn-nav-dashboard')?.click();
+  }
 
   // Update Dev Console Dashboard metrics (if active)
   updateDevConsoleUI();
