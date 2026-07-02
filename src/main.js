@@ -170,13 +170,17 @@ function initTabNavigation() {
   const subtitles = {
     dashboard: 'Overview of your transactions',
     wallet: 'Manage your credit cards and payment methods',
-    analytics: 'Deep dive into spending timeline and categorical distribution'
+    analytics: 'Deep dive into spending timeline and categorical distribution',
+    qa: 'Interact with Claude AI to analyze spendings & get advice',
+    dev: 'Real-time database diagnostics and simulation console'
   };
 
   const titles = {
     dashboard: 'Dashboard',
     wallet: 'My Cards',
-    analytics: 'Analytics'
+    analytics: 'Analytics',
+    qa: 'AI Financial Assistant',
+    dev: 'Developer Platform Console'
   };
 
   navItems.forEach(item => {
@@ -288,6 +292,9 @@ function renderAppUI() {
   renderDonutChart(metrics);
   renderTrendChart(txs, currentTrendRange);
   renderCardChart(cards, txs);
+
+  // Update Dev Console Dashboard metrics (if active)
+  updateDevConsoleUI();
 
   // Update Lucide SVG icons in markup
   if (window.lucide) {
@@ -1255,7 +1262,8 @@ function initProfileModal() {
     );
   });
 
-  document.getElementById('btn-signout-from-profile')?.addEventListener('click', () => {
+  document.getElementById('btn-signout-from-profile')?.addEventListener('click', (e) => {
+    e.preventDefault();
     if (confirm('Are you sure you want to log out?')) {
       signOutUser();
     }
@@ -1431,7 +1439,8 @@ function bindSidebarToggle() {
 
 // LOGOUT BUTTON
 function bindLogoutButton() {
-  document.getElementById('btn-logout')?.addEventListener('click', () => {
+  document.getElementById('btn-logout')?.addEventListener('click', (e) => {
+    e.preventDefault();
     if (confirm('Are you sure you want to log out?')) {
       signOutUser();
     }
@@ -1479,11 +1488,60 @@ function bindAuthGateEvents() {
     signIn(email, password).catch(err => showAuthError('login-error', authErrorMessage(err)));
   });
 
+  const signupPassInput = document.getElementById('signup-password');
+  signupPassInput?.addEventListener('input', () => {
+    const val = signupPassInput.value;
+    const hasLen = val.length >= 8;
+    const hasCases = /[A-Z]/.test(val) && /[a-z]/.test(val);
+    const hasNums = /[0-9]/.test(val);
+    const hasSymbols = /[^A-Za-z0-9]/.test(val);
+
+    const updateCheck = (elId, isMet, label) => {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      el.textContent = `${isMet ? '✔' : '✖'} ${label}`;
+      el.style.color = isMet ? '#10b981' : '#94a3b8';
+    };
+
+    updateCheck('strength-len', hasLen, 'Minimum 8 characters');
+    updateCheck('strength-cases', hasCases, 'Lower & Uppercase letters');
+    updateCheck('strength-nums', hasNums, 'Numbers');
+    updateCheck('strength-symbols', hasSymbols, 'Special characters');
+  });
+
   formSignup?.addEventListener('submit', (e) => {
     e.preventDefault();
     hideAuthErrors();
-    const email = document.getElementById('signup-email').value;
+    const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value;
+    const passwordConfirm = document.getElementById('signup-password-confirm').value;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showAuthError('signup-error', 'Please enter a valid email address.');
+      return;
+    }
+
+    if (password !== passwordConfirm) {
+      showAuthError('signup-error', 'Passwords do not match.');
+      return;
+    }
+
+    const hasLen = password.length >= 8;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+    if (!hasLen) {
+      showAuthError('signup-error', 'Password must be at least 8 characters long.');
+      return;
+    }
+    if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+      showAuthError('signup-error', 'Password must meet all complexity requirements listed below.');
+      return;
+    }
+
     signUp(email, password).catch(err => showAuthError('signup-error', authErrorMessage(err)));
   });
 
@@ -1550,6 +1608,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initReportModal();
         initHelpModal();
         initLedgerFilters();
+        initQaTab();
+        initDevTab();
         bindSidebarToggle();
         bindLogoutButton();
         bindTrendRangeButtons();
@@ -1577,3 +1637,212 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// AI Q&A ASSISTANT HUB
+function initQaTab() {
+  const form = document.getElementById('form-qa');
+  const input = document.getElementById('input-qa');
+  const viewport = document.getElementById('qa-chat-viewport');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+
+    // Append user message to log
+    const userMsg = document.createElement('div');
+    userMsg.className = 'chat-message user';
+    userMsg.style.alignSelf = 'flex-end';
+    userMsg.style.maxWidth = '80%';
+    userMsg.style.padding = '12px 16px';
+    userMsg.style.borderRadius = '12px 12px 0 12px';
+    userMsg.style.background = 'var(--accent)';
+    userMsg.style.color = '#fff';
+    userMsg.style.fontSize = '14px';
+    userMsg.textContent = question;
+    viewport.appendChild(userMsg);
+    viewport.scrollTop = viewport.scrollHeight;
+
+    input.value = '';
+
+    // Append thinking assistant indicator
+    const thinkingMsg = document.createElement('div');
+    thinkingMsg.className = 'chat-message assistant thinking';
+    thinkingMsg.style.alignSelf = 'flex-start';
+    thinkingMsg.style.maxWidth = '80%';
+    thinkingMsg.style.padding = '12px 16px';
+    thinkingMsg.style.borderRadius = '12px 12px 12px 0';
+    thinkingMsg.style.background = 'var(--border-color)';
+    thinkingMsg.style.color = 'var(--text-muted)';
+    thinkingMsg.style.fontSize = '14px';
+    thinkingMsg.style.fontStyle = 'italic';
+    thinkingMsg.textContent = 'Thinking...';
+    viewport.appendChild(thinkingMsg);
+    viewport.scrollTop = viewport.scrollHeight;
+
+    const apiKey = getAiApiKey();
+    if (!apiKey) {
+      thinkingMsg.classList.remove('thinking');
+      thinkingMsg.style.fontStyle = 'normal';
+      thinkingMsg.style.color = 'var(--danger)';
+      thinkingMsg.textContent = 'An Anthropic API key is required. Please save your API key in Profile & Settings first.';
+      return;
+    }
+
+    try {
+      const metrics = store.getMetrics(currentScope);
+      const cardsText = store.cards.map(c => `- ${c.name} (...${c.last4}): scope=${c.scope}, balance=$${c.balance.toFixed(2)}, limit=$${c.limit}`).join('\n');
+      const txsText = store.transactions.slice(0, 10).map(t => `- ${t.date} ${t.merchant}: $${t.amount.toFixed(2)} (${t.category})`).join('\n');
+
+      const systemPrompt = `You are a helpful AI Financial Assistant for the ApexWallet Tracker app. 
+You have access to the user's current local wallet state to help answer their questions precisely.
+
+User's Wallet Context:
+- Active Scope: ${currentScope}
+- Total monthly spending: $${metrics.totalSpent.toFixed(2)}
+- Active cards linked: ${metrics.activeCards}
+- Linked Cards:
+${cardsText || 'No cards linked.'}
+- Recent Transactions (last 10):
+${txsText || 'No transactions logged yet.'}
+
+Personal Category Budgets: ${JSON.stringify(store.categoryBudgets)}
+Business Category Budgets: ${JSON.stringify(store.businessCategoryBudgets)}
+
+App Feature Guide:
+1. "My Cards": add, edit, or delete credit/debit cards. Supports Personal/Business scoping.
+2. "Add Expense": manual inputs. Smart beeps and alerts trigger on duplicates (same merchant & amount in last 10 mins) or crossing 80%/100% budget.
+3. "Import": drag/drop bank statement CSV or PDF. Parses locally.
+4. "AI statement parsing": powered by Claude, requires Anthropic API key in Settings, redacts card numbers.
+5. "Analytics": Spending Trend graphs (Week, Month, 3M, 6M, Year), Card distribution graphs, category totals, and Monthly PDF generation.
+6. "Monthly email reports": opt-in from settings to get automated PDF report emails.
+
+Rule: Keep your responses highly concise, practical, and structured. Do not use markdown code fences. Respond directly to the user's question.`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 2048,
+          messages: [
+            { role: 'user', content: `System prompt context: \n${systemPrompt}\n\nUser Question:\n${question}` }
+          ]
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`AI request failed (status ${res.status}).`);
+      }
+
+      const data = await res.json();
+      const rawText = (data.content?.[0]?.text || '').trim();
+
+      thinkingMsg.classList.remove('thinking');
+      thinkingMsg.style.fontStyle = 'normal';
+      thinkingMsg.textContent = rawText;
+      viewport.scrollTop = viewport.scrollHeight;
+    } catch (err) {
+      console.error('AI Q&A failed', err);
+      thinkingMsg.classList.remove('thinking');
+      thinkingMsg.style.fontStyle = 'normal';
+      thinkingMsg.style.color = 'var(--danger)';
+      thinkingMsg.textContent = err.message || 'Chat failed. Check your API key or network connection.';
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+  });
+
+  document.querySelectorAll('.btn-qa-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const q = btn.getAttribute('data-question');
+      if (input) {
+        input.value = q;
+        form?.dispatchEvent(new Event('submit'));
+      }
+    });
+  });
+}
+
+// DEVELOPER DIAGNOSTICS & SANDBOX TAB
+function initDevTab() {
+  const btnAlert = document.getElementById('btn-simulate-alert');
+  const btnLatency = document.getElementById('btn-simulate-db-latency');
+  const btnReset = document.getElementById('btn-clear-local-state');
+  const btnError = document.getElementById('btn-simulate-error');
+
+  btnAlert?.addEventListener('click', () => {
+    triggerSmartAlert({
+      severity: 'error',
+      title: '🛡️ Dev Console: Simulated Alert',
+      message: 'This is a mock warning beep and alert notification triggered from the Developer Console sandbox panel.'
+    });
+  });
+
+  btnLatency?.addEventListener('click', () => {
+    store.simulatedLatency = !store.simulatedLatency;
+    const btn = document.getElementById('btn-simulate-db-latency');
+    if (btn) {
+      btn.textContent = store.simulatedLatency ? 'Disable Latency Simulator' : 'Toggle Network Latency';
+      btn.style.borderColor = store.simulatedLatency ? 'var(--accent)' : '';
+    }
+    toastManager.show(
+      'Developer Config',
+      store.simulatedLatency ? 'Enabled simulated 2000ms database operation delay.' : 'Disabled latency simulation.',
+      'info'
+    );
+    updateDevConsoleUI();
+  });
+
+  btnReset?.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear the local client memory state?')) {
+      store.clearForLogout();
+      renderAppUI();
+      toastManager.show('Developer Console', 'Reset client-side local cache memory state.', 'info');
+    }
+  });
+
+  btnError?.addEventListener('click', () => {
+    toastManager.show('Database Error', 'Simulated Firestore connection drop: [code=unavailable] client offline.', 'warning');
+  });
+}
+
+function updateDevConsoleUI() {
+  const statusEl = document.getElementById('dev-auth-status');
+  const uidEl = document.getElementById('dev-user-uid');
+  const readsEl = document.getElementById('dev-db-reads');
+  const writesEl = document.getElementById('dev-db-writes');
+  const stateJsonEl = document.getElementById('dev-state-json');
+
+  if (statusEl) {
+    statusEl.textContent = currentAuthUser ? 'Connected' : 'Disconnected';
+    statusEl.style.color = currentAuthUser ? '#10b981' : '#ef4444';
+  }
+  if (uidEl && currentAuthUser) {
+    uidEl.textContent = currentAuthUser.uid;
+  }
+  if (readsEl) {
+    readsEl.textContent = store.readCount;
+  }
+  if (writesEl) {
+    writesEl.textContent = store.writeCount;
+  }
+  if (stateJsonEl) {
+    stateJsonEl.textContent = JSON.stringify({
+      currentUid: store.currentUid,
+      userEmail: store.userEmail,
+      ready: store.ready,
+      simulatedLatency: store.simulatedLatency,
+      cards: store.cards,
+      transactions: store.transactions ? store.transactions.slice(0, 10) : [],
+      settings: store.settings,
+      categoryBudgets: store.categoryBudgets,
+      businessCategoryBudgets: store.businessCategoryBudgets,
+      customCategories: store.customCategories
+    }, null, 2);
+  }
+}

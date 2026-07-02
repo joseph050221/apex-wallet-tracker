@@ -26,7 +26,8 @@ const DEFAULT_SETTINGS = {
   sidebarCollapsed: false,
   notify: true,
   monthlyReportEmailOptIn: false,
-  hasSeenTutorial: false
+  hasSeenTutorial: false,
+  welcomeEmailSent: false
 };
 
 class StateStore {
@@ -41,6 +42,11 @@ class StateStore {
     this.businessCategoryBudgets = { ...DEFAULT_BUDGETS };
     this.customCategories = [];
     this.listeners = [];
+    
+    // Firestore operation counters for developer diagnostic dashboard
+    this.readCount = 0;
+    this.writeCount = 0;
+    this.simulatedLatency = false;
   }
 
   // Personal by default -- deleted/missing cards fall back to personal so
@@ -74,33 +80,45 @@ class StateStore {
 
   _saveCardDoc(card) {
     if (this.currentUid) {
-      setDoc(doc(db, 'users', this.currentUid, 'cards', card.id), card).catch(e => {
+      this.writeCount++;
+      const run = () => setDoc(doc(db, 'users', this.currentUid, 'cards', card.id), card).catch(e => {
         console.error('Error writing card to Firestore', e);
       });
+      if (this.simulatedLatency) setTimeout(run, 2000);
+      else run();
     }
   }
 
   _saveTransactionDoc(tx) {
     if (this.currentUid) {
-      setDoc(doc(db, 'users', this.currentUid, 'transactions', tx.id), tx).catch(e => {
+      this.writeCount++;
+      const run = () => setDoc(doc(db, 'users', this.currentUid, 'transactions', tx.id), tx).catch(e => {
         console.error('Error writing transaction to Firestore', e);
       });
+      if (this.simulatedLatency) setTimeout(run, 2000);
+      else run();
     }
   }
 
   _deleteCardDoc(cardId) {
     if (this.currentUid) {
-      deleteDoc(doc(db, 'users', this.currentUid, 'cards', cardId)).catch(e => {
+      this.writeCount++;
+      const run = () => deleteDoc(doc(db, 'users', this.currentUid, 'cards', cardId)).catch(e => {
         console.error('Error deleting card from Firestore', e);
       });
+      if (this.simulatedLatency) setTimeout(run, 2000);
+      else run();
     }
   }
 
   _deleteTransactionDoc(txId) {
     if (this.currentUid) {
-      deleteDoc(doc(db, 'users', this.currentUid, 'transactions', txId)).catch(e => {
+      this.writeCount++;
+      const run = () => deleteDoc(doc(db, 'users', this.currentUid, 'transactions', txId)).catch(e => {
         console.error('Error deleting transaction from Firestore', e);
       });
+      if (this.simulatedLatency) setTimeout(run, 2000);
+      else run();
     }
   }
 
@@ -112,8 +130,13 @@ class StateStore {
     this.userEmail = email;
     this.ready = false;
 
+    if (this.simulatedLatency) {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
     try {
       const ref = doc(db, 'users', uid);
+      this.readCount++;
       const snap = await getDoc(ref);
 
       let legacyCards = [];
@@ -140,6 +163,7 @@ class StateStore {
         this.categoryBudgets = { ...DEFAULT_BUDGETS };
         this.businessCategoryBudgets = { ...DEFAULT_BUDGETS };
         this.customCategories = [];
+        this.writeCount++;
         await setDoc(ref, this._snapshotState());
       }
 
@@ -150,6 +174,7 @@ class StateStore {
 
         // Perform migration: write cards
         for (const card of this.cards) {
+          this.writeCount++;
           await setDoc(doc(db, 'users', uid, 'cards', card.id), card);
         }
 
@@ -157,6 +182,7 @@ class StateStore {
         const batchSize = 400;
         for (let i = 0; i < this.transactions.length; i += batchSize) {
           const chunk = this.transactions.slice(i, i + batchSize);
+          this.writeCount++;
           const batch = writeBatch(db);
           for (const tx of chunk) {
             batch.set(doc(db, 'users', uid, 'transactions', tx.id), tx);
@@ -165,6 +191,7 @@ class StateStore {
         }
 
         // Remove legacy fields from main user doc
+        this.writeCount++;
         await setDoc(ref, {
           ...this._snapshotState(),
           cards: deleteField(),
@@ -174,12 +201,14 @@ class StateStore {
         console.log('Legacy database migration completed successfully.');
       } else {
         // Load from sub-collections
+        this.readCount++;
         const cardsSnap = await getDocs(collection(db, 'users', uid, 'cards'));
         this.cards = [];
         cardsSnap.forEach(doc => {
           this.cards.push(doc.data());
         });
 
+        this.readCount++;
         const txsSnap = await getDocs(collection(db, 'users', uid, 'transactions'));
         this.transactions = [];
         txsSnap.forEach(doc => {
@@ -219,10 +248,13 @@ class StateStore {
   // Persist current state to Firestore (fire-and-forget) and notify listeners
   saveState() {
     if (this.currentUid) {
+      this.writeCount++;
       const ref = doc(db, 'users', this.currentUid);
-      setDoc(ref, this._snapshotState()).catch(e => {
+      const run = () => setDoc(ref, this._snapshotState()).catch(e => {
         console.error('Error writing to Firestore', e);
       });
+      if (this.simulatedLatency) setTimeout(run, 2000);
+      else run();
     }
     this.notifyListeners();
   }
