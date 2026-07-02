@@ -14,8 +14,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons Script -->
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-CPTMR_2v.js"></script>
-    <link rel="stylesheet" crossorigin href="/apex-wallet-tracker/assets/index-D69CCszz.css">
+    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-B0D0amwW.js"></script>
+    <link rel="stylesheet" crossorigin href="/apex-wallet-tracker/assets/index-DJx32G-X.css">
   </head>
   <body class="dark-theme">
     <!-- Background Animated Blobs for Aesthetics -->
@@ -160,7 +160,17 @@
 
         <!-- Dynamic Panels -->
         <div class="content-body">
-          
+
+          <!-- Global Personal / Business / All filter -- applies to Dashboard, Analytics, My Cards, and the ledger -->
+          <div class="scope-switcher-bar">
+            <span class="scope-switcher-label">Viewing:</span>
+            <div class="btn-group" id="scope-switcher">
+              <button class="btn btn-secondary btn-sm" data-scope="personal">Personal</button>
+              <button class="btn btn-secondary btn-sm" data-scope="business">Business</button>
+              <button class="btn btn-secondary btn-sm active" data-scope="all">All</button>
+            </div>
+          </div>
+
           <!-- TAB: DASHBOARD -->
           <section id="tab-dashboard" class="tab-panel active">
             <!-- Grid of core metrics -->
@@ -512,6 +522,14 @@
             </div>
 
             <div class="form-group">
+              <label for="form-card-scope">Expense Type</label>
+              <select id="form-card-scope" required>
+                <option value="personal">Personal</option>
+                <option value="business">Business</option>
+              </select>
+            </div>
+
+            <div class="form-group">
               <label for="form-card-color">Card Skin Theme</label>
               <select id="form-card-color" required>
                 <option value="card-theme-blue">Deep Blue Metallic (Visa Sapphire Style)</option>
@@ -552,12 +570,21 @@
             </div>
 
             <div class="profile-section">
-              <h4>Monthly Category Budgets</h4>
-              <p class="panel-desc">Used to trigger spending alerts when you're close to or over budget.</p>
+              <h4>Personal Category Budgets</h4>
+              <p class="panel-desc">Used to trigger spending alerts on your personal cards when you're close to or over budget.</p>
               <div class="budgets-grid" id="budgets-grid">
                 <!-- JS generated: one input per category -->
               </div>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-save-budgets">Save Budgets</button>
+            </div>
+
+            <div class="profile-section">
+              <h4>Business Category Budgets</h4>
+              <p class="panel-desc">Same idea, but for spending on cards tagged Business -- kept separate so a personal Dining budget doesn't get mixed up with a business one.</p>
+              <div class="budgets-grid" id="business-budgets-grid">
+                <!-- JS generated: one input per category -->
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-business-budgets">Save Business Budgets</button>
             </div>
 
             <div class="profile-section">
