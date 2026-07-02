@@ -14,8 +14,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons Script -->
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-CIMq_oTk.js"></script>
-    <link rel="stylesheet" crossorigin href="/apex-wallet-tracker/assets/index-DMLH2kUR.css">
+    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-x81I9WJO.js"></script>
+    <link rel="stylesheet" crossorigin href="/apex-wallet-tracker/assets/index-hDK16_wA.css">
   </head>
   <body class="dark-theme">
     <!-- Background Animated Blobs for Aesthetics -->
@@ -498,14 +498,14 @@
       <!-- DIALOG MODAL: MONTHLY REPORT -->
       <div class="modal-backdrop hidden" id="modal-report">
         <div class="modal-content modal-content-wide glass-panel" id="report-modal-content">
-          <div class="modal-header no-print">
+          <div class="modal-header">
             <h3>Monthly Report</h3>
             <button class="btn-close-modal" id="btn-close-report-modal">
               <i data-lucide="x"></i>
             </button>
           </div>
 
-          <div class="report-controls no-print">
+          <div class="report-controls">
             <div class="form-group">
               <label for="report-month-picker">Month</label>
               <input type="month" id="report-month-picker">
@@ -516,9 +516,7 @@
             </button>
           </div>
 
-          <div id="report-body">
-            <!-- JS generated report content -->
-          </div>
+          <iframe id="report-frame" title="Monthly Report" style="width:100%;border:none;background:#fff;border-radius:8px;display:block;"></iframe>
         </div>
       </div>
 
