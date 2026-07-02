@@ -6,7 +6,8 @@ import {
   signOut,
   deleteUser,
   onAuthStateChanged,
-  sendEmailVerification
+  sendEmailVerification,
+  applyActionCode
 } from 'firebase/auth';
 import { auth } from './firebase.js';
 
@@ -18,7 +19,7 @@ export async function signUp(email, password) {
     const actionCodeSettings = {
       // Redirects user back to this exact deployed app URL after verification
       url: window.location.origin + window.location.pathname,
-      handleCodeInApp: false
+      handleCodeInApp: true
     };
     await sendEmailVerification(credential.user, actionCodeSettings);
   }
@@ -33,11 +34,15 @@ export function resendVerificationEmail() {
   if (auth.currentUser) {
     const actionCodeSettings = {
       url: window.location.origin + window.location.pathname,
-      handleCodeInApp: false
+      handleCodeInApp: true
     };
     return sendEmailVerification(auth.currentUser, actionCodeSettings);
   }
   return Promise.reject(new Error('No authenticated user session found.'));
+}
+
+export function verifyEmailCode(oobCode) {
+  return applyActionCode(auth, oobCode);
 }
 
 export function signInWithGoogle() {

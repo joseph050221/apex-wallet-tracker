@@ -14,7 +14,8 @@ import {
   deleteAccount,
   onAuthChange,
   authErrorMessage,
-  resendVerificationEmail
+  resendVerificationEmail,
+  verifyEmailCode
 } from './auth.js';
 import { CATEGORIES, getCategoryColor, getCategoryLabel, hexToRgba } from './categories.js';
 import { parseImportFile } from './import.js';
@@ -1658,6 +1659,16 @@ document.addEventListener('DOMContentLoaded', () => {
   showLoadingSplash();
   bindAuthGateEvents();
 
+  // Catch verification action code from email URL redirects to handle inside app
+  const urlParams = new URLSearchParams(window.location.search);
+  const mode = urlParams.get('mode');
+  const oobCode = urlParams.get('oobCode');
+
+  if (mode === 'verifyEmail' && oobCode) {
+    handleEmailVerificationUrl(oobCode);
+    return;
+  }
+
   let appInitialized = false;
   let authGeneration = 0;
 
@@ -1940,5 +1951,32 @@ function updateDevConsoleUI() {
       businessCategoryBudgets: store.businessCategoryBudgets,
       customCategories: store.customCategories
     }, null, 2);
+  }
+}
+
+// Handles custom email link confirmations inside the application sandbox
+async function handleEmailVerificationUrl(oobCode) {
+  const splash = document.getElementById('initial-loading');
+  if (splash) {
+    splash.innerHTML = `
+      <div style="text-align: center;">
+        <div class="loading-spinner" style="margin: 0 auto 16px;"></div>
+        <p style="font-size: 15px; font-weight: 500; color: var(--text-main);">Verifying your email address...</p>
+      </div>
+    `;
+    splash.classList.remove('hidden');
+  }
+
+  try {
+    await verifyEmailCode(oobCode);
+    toastManager.show('Email Verified', 'Your email has been successfully verified! You can now log in.', 'success');
+  } catch (err) {
+    console.error('In-app email verification failed', err);
+    toastManager.show('Verification Failed', err.message || 'The verification link is invalid or has expired.', 'warning');
+  } finally {
+    // Clear URL parameters to prevent infinite verification loops on page refreshes
+    window.history.replaceState({}, document.title, window.location.pathname);
+    resetAuthForms();
+    showAuthGate();
   }
 }
