@@ -15,7 +15,12 @@ const googleProvider = new GoogleAuthProvider();
 export async function signUp(email, password) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   if (credential.user) {
-    await sendEmailVerification(credential.user);
+    const actionCodeSettings = {
+      // Redirects user back to this exact deployed app URL after verification
+      url: window.location.origin + window.location.pathname,
+      handleCodeInApp: false
+    };
+    await sendEmailVerification(credential.user, actionCodeSettings);
   }
   return credential;
 }
