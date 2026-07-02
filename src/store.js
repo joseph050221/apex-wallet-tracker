@@ -1,6 +1,6 @@
 // Application State Store with Firestore Persistence (per authenticated user)
 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase.js';
 
 const DEFAULT_BUDGETS = {
@@ -314,6 +314,18 @@ class StateStore {
   updateSettings(newSettings) {
     this.settings = { ...this.settings, ...newSettings };
     this.saveState();
+  }
+
+  // Update monthly category budgets (used by the smart spend-alert thresholds)
+  updateCategoryBudgets(newBudgets) {
+    this.categoryBudgets = { ...this.categoryBudgets, ...newBudgets };
+    this.saveState();
+  }
+
+  // Permanently delete this account's Firestore document
+  async deleteAccountData() {
+    if (!this.currentUid) return;
+    await deleteDoc(doc(db, 'users', this.currentUid));
   }
 
   // Get metrics and totals

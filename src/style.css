@@ -346,6 +346,14 @@ h1, h2, h3, h4, h5, h6, .logo-text {
 }
 
 /* User avatar */
+.user-profile {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+}
+
 .avatar {
   width: 40px;
   height: 40px;
@@ -357,6 +365,22 @@ h1, h2, h3, h4, h5, h6, .logo-text {
 .avatar:hover {
   border-color: var(--primary);
   transform: scale(1.05);
+}
+
+.avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--secondary);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.avatar-lg {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
 }
 
 /* Button Styles */
@@ -1967,6 +1991,59 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   margin-top: 10px;
 }
 
+/* PROFILE & SETTINGS MODAL */
+.profile-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile-account-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-email {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.profile-joined {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.profile-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
+}
+
+.profile-section h4 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.profile-section .panel-desc {
+  margin-bottom: 14px;
+}
+
+.budgets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.budgets-grid .form-group {
+  gap: 4px;
+}
+
+.profile-section.danger-zone h4 {
+  color: var(--danger);
+}
+
 /* OAUTH SPECIFIC STYLES */
 .oauth-modal {
   max-width: 400px;
@@ -2502,10 +2579,6 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   .top-bar .btn-primary {
     padding: 8px 14px;
     font-size: 13px;
-  }
-
-  .top-bar .user-profile {
-    display: none; /* Hide avatar profile icon */
   }
 
   .content-body {

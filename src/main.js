@@ -16,9 +16,15 @@ import {
   signIn,
   signInWithGoogle,
   signOutUser,
+  deleteAccount,
   onAuthChange,
   authErrorMessage
 } from './auth.js';
+
+const CATEGORIES = ['Dining', 'Shopping', 'Transport', 'Entertainment', 'Bills', 'Groceries', 'Travel'];
+
+// The currently signed-in Firebase user object (set by the auth listener)
+let currentAuthUser = null;
 
 // TOAST NOTIFICATION MANAGER
 const toastManager = {
@@ -581,9 +587,7 @@ function renderAnalyticsTrend(range = 'month') {
     categoryCounts[tx.category] = (categoryCounts[tx.category] || 0) + 1;
   });
 
-  const categories = ['Dining', 'Shopping', 'Transport', 'Entertainment', 'Bills', 'Groceries', 'Travel'];
-
-  categories.forEach(cat => {
+  CATEGORIES.forEach(cat => {
     const totalSpent = metrics.categoryTotals[cat] || 0.00;
     const count = categoryCounts[cat] || 0;
     const catClass = cat.toLowerCase().replace(' & ', '-');
@@ -704,6 +708,131 @@ function openCardModal(card = null) {
   }
 
   document.getElementById('modal-add-card').classList.remove('hidden');
+}
+
+// AVATAR RENDERING: shows the user's real photo (Google sign-in) or a
+// letter-initial fallback (email/password accounts have no photo)
+function applyAvatar(imgEl, fallbackEl, user) {
+  if (!imgEl || !fallbackEl || !user) return;
+
+  if (user.photoURL) {
+    imgEl.src = user.photoURL;
+    imgEl.classList.remove('hidden');
+    fallbackEl.classList.add('hidden');
+  } else {
+    fallbackEl.textContent = (user.email || '?')[0].toUpperCase();
+    fallbackEl.classList.remove('hidden');
+    imgEl.classList.add('hidden');
+  }
+}
+
+function renderHeaderAvatar(user) {
+  applyAvatar(
+    document.getElementById('header-avatar-img'),
+    document.getElementById('header-avatar-fallback'),
+    user
+  );
+}
+
+// PROFILE & SETTINGS MODAL
+function populateBudgetsGrid() {
+  const container = document.getElementById('budgets-grid');
+  if (!container) return;
+
+  container.innerHTML = CATEGORIES.map(cat => `
+    <div class="form-group">
+      <label for="budget-input-${cat}">${cat}</label>
+      <input type="number" min="0" step="1" id="budget-input-${cat}" value="${store.categoryBudgets[cat] || 0}">
+    </div>
+  `).join('');
+}
+
+function openProfileModal() {
+  if (!currentAuthUser) return;
+
+  applyAvatar(
+    document.getElementById('profile-avatar-img'),
+    document.getElementById('profile-avatar-fallback'),
+    currentAuthUser
+  );
+
+  document.getElementById('profile-email').textContent = currentAuthUser.email || '';
+
+  const createdAt = currentAuthUser.metadata?.creationTime;
+  document.getElementById('profile-joined').textContent = createdAt
+    ? `Member since ${new Date(createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+    : '';
+
+  populateBudgetsGrid();
+  updateNotificationStatusUI();
+
+  document.getElementById('modal-profile').classList.remove('hidden');
+}
+
+function updateNotificationStatusUI() {
+  const statusText = document.getElementById('notification-status-text');
+  const enableBtn = document.getElementById('btn-enable-notifications');
+  if (!statusText || !enableBtn) return;
+
+  if (!('Notification' in window)) {
+    statusText.textContent = 'Desktop notifications are not supported in this browser.';
+    enableBtn.classList.add('hidden');
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    statusText.textContent = 'Desktop notifications are enabled for spending alerts.';
+    enableBtn.classList.add('hidden');
+  } else if (Notification.permission === 'denied') {
+    statusText.textContent = 'Notifications are blocked. Enable them in your browser\'s site settings.';
+    enableBtn.classList.add('hidden');
+  } else {
+    statusText.textContent = 'Enable desktop notifications to get notified about spending alerts.';
+    enableBtn.classList.remove('hidden');
+  }
+}
+
+function initProfileModal() {
+  const modalProfile = document.getElementById('modal-profile');
+  const btnOpenProfile = document.getElementById('btn-open-profile');
+  const btnCloseProfile = document.getElementById('btn-close-profile-modal');
+
+  btnOpenProfile?.addEventListener('click', openProfileModal);
+  btnCloseProfile?.addEventListener('click', () => modalProfile.classList.add('hidden'));
+
+  document.getElementById('btn-save-budgets')?.addEventListener('click', () => {
+    const newBudgets = {};
+    CATEGORIES.forEach(cat => {
+      const input = document.getElementById(`budget-input-${cat}`);
+      newBudgets[cat] = parseFloat(input.value) || 0;
+    });
+    store.updateCategoryBudgets(newBudgets);
+    toastManager.show('Budgets Updated', 'Your monthly category budgets have been saved.', 'success');
+  });
+
+  document.getElementById('btn-enable-notifications')?.addEventListener('click', () => {
+    Notification.requestPermission().then(() => updateNotificationStatusUI());
+  });
+
+  document.getElementById('btn-signout-from-profile')?.addEventListener('click', () => {
+    signOutUser();
+  });
+
+  document.getElementById('btn-delete-account')?.addEventListener('click', async () => {
+    const confirmed = confirm('This will permanently delete your account and all your cards and transactions. This cannot be undone. Continue?');
+    if (!confirmed) return;
+
+    const typed = prompt('Type DELETE to confirm.');
+    if (typed !== 'DELETE') return;
+
+    try {
+      await store.deleteAccountData();
+      await deleteAccount();
+      toastManager.show('Account Deleted', 'Your account and data have been removed.', 'info');
+    } catch (err) {
+      toastManager.show('Deletion Failed', authErrorMessage(err), 'warning');
+    }
+  });
 }
 
 // BIND MODAL DIALOGS ACTION EVENT LISTENERS
@@ -945,16 +1074,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const myGeneration = ++authGeneration;
 
     if (user) {
+      currentAuthUser = user;
       await store.initForUser(user.uid);
       if (myGeneration !== authGeneration) return; // superseded by a newer auth event
 
       const emailEl = document.getElementById('sidebar-user-email');
       if (emailEl) emailEl.textContent = user.email || '';
+      renderHeaderAvatar(user);
 
       if (!appInitialized) {
         initTabNavigation();
         bindThemeToggleClick();
         initModals();
+        initProfileModal();
         initLedgerFilters();
         bindSidebarToggle();
         bindLogoutButton();
@@ -976,6 +1108,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showApp();
       logToConsole('Welcome to ApexWallet Tracker. Click simulator cards to select.', 'system');
     } else {
+      currentAuthUser = null;
       store.clearForLogout();
       resetAuthForms();
       showAuthGate();

@@ -4,6 +4,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
+  deleteUser,
   onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from './firebase.js';
@@ -26,6 +27,12 @@ export function signOutUser() {
   return signOut(auth);
 }
 
+// Permanently deletes the currently signed-in Firebase Auth user.
+export function deleteAccount() {
+  if (!auth.currentUser) return Promise.reject(new Error('No signed-in user'));
+  return deleteUser(auth.currentUser);
+}
+
 export function onAuthChange(callback) {
   return onAuthStateChanged(auth, callback);
 }
@@ -44,7 +51,8 @@ export function authErrorMessage(error) {
     'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
     'auth/cancelled-popup-request': 'Google sign-in was cancelled.',
     'auth/invalid-api-key': 'App is not configured with a valid Firebase project yet.',
-    'auth/network-request-failed': 'Network error. Check your connection and try again.'
+    'auth/network-request-failed': 'Network error. Check your connection and try again.',
+    'auth/requires-recent-login': 'For security, please log out and log back in before deleting your account.'
   };
   return messages[code] || 'Something went wrong. Please try again.';
 }
