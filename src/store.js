@@ -3,111 +3,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebase.js';
 
-const DEFAULT_CARDS = [
-  {
-    id: 'card-1',
-    name: 'Chase Sapphire Reserve',
-    brand: 'visa',
-    last4: '8593',
-    color: 'card-theme-blue',
-    limit: 20000,
-    balance: 1425.80
-  },
-  {
-    id: 'card-2',
-    name: 'Amex Gold Card',
-    brand: 'amex',
-    last4: '1007',
-    color: 'card-theme-gold',
-    limit: 15000,
-    balance: 842.10
-  },
-  {
-    id: 'card-3',
-    name: 'Apple Card',
-    brand: 'mastercard',
-    last4: '4022',
-    color: 'card-theme-silver',
-    limit: 10000,
-    balance: 312.40
-  },
-  {
-    id: 'card-4',
-    name: 'Chase Freedom Flex',
-    brand: 'visa',
-    last4: '6240',
-    color: 'card-theme-purple',
-    limit: 8000,
-    balance: 95.00
-  }
-];
-
-const DEFAULT_TRANSACTIONS = [
-  {
-    id: 'tx-1',
-    merchant: 'Target Stores',
-    amount: 85.20,
-    category: 'Shopping',
-    cardId: 'card-1',
-    date: '2026-06-29',
-    source: 'Payment Simulator'
-  },
-  {
-    id: 'tx-2',
-    merchant: 'Starbucks Coffee',
-    amount: 12.50,
-    category: 'Dining',
-    cardId: 'card-2',
-    date: '2026-06-28',
-    source: 'Payment Simulator'
-  },
-  {
-    id: 'tx-3',
-    merchant: 'Uber Trip',
-    amount: 22.40,
-    category: 'Transport',
-    cardId: 'card-1',
-    date: '2026-06-27',
-    source: 'Payment Simulator'
-  },
-  {
-    id: 'tx-4',
-    merchant: 'Whole Foods Market',
-    amount: 72.10,
-    category: 'Groceries',
-    cardId: 'card-2',
-    date: '2026-06-26',
-    source: 'Payment Simulator'
-  },
-  {
-    id: 'tx-5',
-    merchant: 'Netflix Subscription',
-    amount: 15.49,
-    category: 'Entertainment',
-    cardId: 'card-3',
-    date: '2026-06-25',
-    source: 'Payment Simulator'
-  },
-  {
-    id: 'tx-6',
-    merchant: 'Delta Air Lines',
-    amount: 249.50,
-    category: 'Travel',
-    cardId: 'card-1',
-    date: '2026-06-24',
-    source: 'Payment Simulator'
-  },
-  {
-    id: 'tx-7',
-    merchant: 'ConEd Utility',
-    amount: 112.40,
-    category: 'Bills',
-    cardId: 'card-4',
-    date: '2026-06-20',
-    source: 'Manual Input'
-  }
-];
-
 const DEFAULT_BUDGETS = {
   Dining: 180,
   Shopping: 250,
@@ -168,22 +63,22 @@ class StateStore {
 
       if (snap.exists()) {
         const data = snap.data();
-        this.cards = data.cards || DEFAULT_CARDS;
-        this.transactions = data.transactions || DEFAULT_TRANSACTIONS;
+        this.cards = data.cards || [];
+        this.transactions = data.transactions || [];
         this.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
         this.categoryBudgets = data.categoryBudgets || DEFAULT_BUDGETS;
       } else {
-        // First-ever login for this account: seed with demo data
-        this.cards = DEFAULT_CARDS;
-        this.transactions = DEFAULT_TRANSACTIONS;
+        // First-ever login for this account: start with a clean slate
+        this.cards = [];
+        this.transactions = [];
         this.settings = { ...DEFAULT_SETTINGS };
         this.categoryBudgets = DEFAULT_BUDGETS;
         await setDoc(ref, this._snapshotState());
       }
     } catch (e) {
       console.error('Error loading state from Firestore, using defaults.', e);
-      this.cards = DEFAULT_CARDS;
-      this.transactions = DEFAULT_TRANSACTIONS;
+      this.cards = [];
+      this.transactions = [];
       this.settings = { ...DEFAULT_SETTINGS };
       this.categoryBudgets = DEFAULT_BUDGETS;
     }
