@@ -19,18 +19,32 @@ function redactSensitiveLines(lines) {
   return lines.map(line => line.replace(ACCOUNT_NUMBER_RE, '[redacted]'));
 }
 
+// Strips common ways a model deviates from "just output CSV": markdown code
+// fences, a leading sentence before the header, or trailing commentary.
+// Finds the actual "Date,Description,Amount" header line and keeps only
+// contiguous lines from there.
+function sanitizeCsvResponse(text) {
+  const withoutFences = text.replace(/```[a-z]*\n?/gi, '');
+  const lines = withoutFences.split('\n');
+  const headerIdx = lines.findIndex(l => /^date\s*,\s*description\s*,\s*amount/i.test(l.trim()));
+  if (headerIdx === -1) return withoutFences.trim();
+  return lines.slice(headerIdx).join('\n').trim();
+}
+
 async function callClaude(lines, apiKey) {
   const statementText = redactSensitiveLines(lines).join('\n');
 
-  const prompt = `You are extracting transactions from a bank or credit-card statement. Below is raw text extracted from a PDF (line breaks may be imperfect, columns may run together).
+  const prompt = `You are extracting transactions from a bank or credit-card statement. Below is raw text extracted from a PDF (line breaks may be imperfect, columns may run together). The statement may be in any language -- read it in its original language, but your output must follow the exact rules below regardless of the source language or its formatting conventions.
 
-Return ONLY plain CSV, no explanation, no markdown code fences. The first line must be exactly:
-Date,Description,Amount
-
-Then one row per expense/purchase transaction:
-- Skip deposits, payments received, credits, refunds, and non-transaction lines (headers, totals, balances, account info).
-- Date format: YYYY-MM-DD
-- Amount: positive number, no currency symbol
+Output rules (follow exactly, even if the source statement uses different conventions):
+- Output ONLY plain CSV text. No explanation, no notes, no markdown code fences (no \`\`\`), nothing before or after the CSV.
+- The first line must be exactly: Date,Description,Amount
+- Use a comma (,) as the field separator, never a semicolon.
+- Use a period (.) as the decimal separator, never a comma (e.g. 12.50, not 12,50).
+- Date format: YYYY-MM-DD (convert from whatever format the source uses).
+- Amount: positive number only, no currency symbol, no thousands separator.
+- Description: translate or keep the original merchant text, but strip commas from it so it doesn't break CSV columns.
+- One row per expense/purchase transaction. Skip deposits, payments received, credits, refunds, and non-transaction lines (headers, totals, balances, account info).
 
 Statement text:
 ${statementText}`;
@@ -45,7 +59,7 @@ ${statementText}`;
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [{ role: 'user', content: prompt }]
     })
   });
@@ -57,7 +71,9 @@ ${statementText}`;
   }
 
   const data = await res.json();
-  return (data.content?.[0]?.text || '').trim();
+  const rawText = (data.content?.[0]?.text || '').trim();
+  console.log('[AI import] raw model response:', rawText);
+  return sanitizeCsvResponse(rawText);
 }
 
 // Same return shape as parsePdfTransactions in import.js:
@@ -85,6 +101,7 @@ export async function parsePdfTransactionsWithAI(file, apiKey) {
 
   const { transactions } = parseCsvTransactions(csvText);
   if (transactions.length === 0) {
+    console.log('[AI import] sanitized CSV that produced zero rows:', csvText);
     return { transactions: [], error: "The AI couldn't find any transactions in this statement either." };
   }
   return { transactions, error: null, aiParsed: true };
