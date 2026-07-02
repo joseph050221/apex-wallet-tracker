@@ -3,6 +3,7 @@
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase.js';
 import { CATEGORIES } from './categories.js';
+import { parseLocalDate } from './dateUtils.js';
 
 const DEFAULT_BUDGETS = {
   Dining: 180,
@@ -498,7 +499,7 @@ class StateStore {
     const now = new Date();
     const transactionsThisMonth = transactions.filter(tx => {
       if (tx.type === 'payment') return false;
-      const txDate = new Date(tx.date);
+      const txDate = parseLocalDate(tx.date);
       return txDate.getFullYear() === now.getFullYear() && txDate.getMonth() === now.getMonth();
     }).length;
 
@@ -509,6 +510,60 @@ class StateStore {
       categoryTotals,
       cardTotals,
       transactionsThisMonth
+    };
+  }
+
+  // Builds a consolidated report for one calendar month across every card
+  // (this is the actual point of it -- individual card statements only show
+  // that one card; this shows everything together with each transaction's
+  // card clearly attributed), optionally filtered to Personal or Business.
+  generateMonthlyReportData(year, month, scope = 'all') {
+    const cards = this.getCardsForScope(scope);
+    const cardIds = new Set(cards.map(c => c.id));
+
+    const monthTxs = this.getTransactionsForScope(scope).filter(tx => {
+      const d = parseLocalDate(tx.date);
+      return d.getFullYear() === year && d.getMonth() === month;
+    });
+
+    const purchases = monthTxs.filter(tx => tx.type !== 'payment');
+    const payments = monthTxs.filter(tx => tx.type === 'payment');
+
+    const totalSpent = purchases.reduce((sum, tx) => sum + tx.amount, 0);
+    const totalPayments = payments.reduce((sum, tx) => sum + tx.amount, 0);
+
+    // Group purchases by card, including cards with zero activity that month
+    // so the report shows a complete picture of every card in scope.
+    const cardBreakdown = cards.map(card => {
+      const cardTxs = purchases
+        .filter(tx => tx.cardId === card.id)
+        .sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date));
+      return {
+        card,
+        transactions: cardTxs,
+        subtotal: cardTxs.reduce((sum, tx) => sum + tx.amount, 0)
+      };
+    }).filter(entry => entry.transactions.length > 0);
+
+    // Purchases whose card was later deleted (cardId no longer resolves)
+    const unlinkedTransactions = purchases
+      .filter(tx => !tx.cardId || !cardIds.has(tx.cardId))
+      .sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date));
+
+    const categoryTotals = {};
+    purchases.forEach(tx => {
+      categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
+    });
+
+    return {
+      year,
+      month,
+      scope,
+      totalSpent,
+      totalPayments,
+      cardBreakdown,
+      unlinkedTransactions,
+      categoryTotals
     };
   }
 }

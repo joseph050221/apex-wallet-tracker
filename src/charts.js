@@ -1,6 +1,7 @@
 // Chart Manager using Chart.js Auto-Registration
 import Chart from 'chart.js/auto';
 import { getCategoryColor } from './categories.js';
+import { parseLocalDate } from './dateUtils.js';
 
 // Global references to Chart instances
 let donutChart = null;
@@ -134,7 +135,7 @@ export function renderTrendChart(transactions, range = 'month') {
       weekEnd.setHours(23, 59, 59, 999);
 
       const total = purchaseTxs.reduce((sum, tx) => {
-        const txDate = new Date(tx.date);
+        const txDate = parseLocalDate(tx.date);
         return (txDate >= weekStart && txDate <= weekEnd) ? sum + tx.amount : sum;
       }, 0);
 
@@ -149,7 +150,7 @@ export function renderTrendChart(transactions, range = 'month') {
     for (let m = 11; m >= 0; m--) {
       const monthDate = new Date(today.getFullYear(), today.getMonth() - m, 1);
       const total = purchaseTxs.reduce((sum, tx) => {
-        const txDate = new Date(tx.date);
+        const txDate = parseLocalDate(tx.date);
         return (txDate.getFullYear() === monthDate.getFullYear() && txDate.getMonth() === monthDate.getMonth())
           ? sum + tx.amount : sum;
       }, 0);
