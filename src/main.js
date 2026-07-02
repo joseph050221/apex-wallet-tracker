@@ -1691,7 +1691,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (user) {
       // Gate email verification (Google Auth accounts are verified by default)
-      if (!user.emailVerified) {
+      // Developer bypass: whitelisted admin accounts are exempt from verification checks to ease testing
+      const devEmails = ['admin@apexwallet.com', 'joseph050221@gmail.com', 'luffy@example.com', 'josephzhangce0221@gmail.com'];
+      const isDeveloperEmail = user.email && devEmails.includes(user.email.toLowerCase());
+
+      if (!user.emailVerified && !isDeveloperEmail) {
         currentAuthUser = user;
         const displayEl = document.getElementById('verify-email-display');
         if (displayEl) displayEl.textContent = user.email || '';
