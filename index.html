@@ -497,14 +497,14 @@
       <!-- DIALOG MODAL: MONTHLY REPORT -->
       <div class="modal-backdrop hidden" id="modal-report">
         <div class="modal-content modal-content-wide glass-panel" id="report-modal-content">
-          <div class="modal-header no-print">
+          <div class="modal-header">
             <h3>Monthly Report</h3>
             <button class="btn-close-modal" id="btn-close-report-modal">
               <i data-lucide="x"></i>
             </button>
           </div>
 
-          <div class="report-controls no-print">
+          <div class="report-controls">
             <div class="form-group">
               <label for="report-month-picker">Month</label>
               <input type="month" id="report-month-picker">
@@ -515,9 +515,7 @@
             </button>
           </div>
 
-          <div id="report-body">
-            <!-- JS generated report content -->
-          </div>
+          <iframe id="report-frame" title="Monthly Report" style="width:100%;border:none;background:#fff;border-radius:8px;display:block;"></iframe>
         </div>
       </div>
 

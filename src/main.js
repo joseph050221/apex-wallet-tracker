@@ -18,6 +18,7 @@ import {
 import { CATEGORIES, getCategoryColor, getCategoryLabel, hexToRgba } from './categories.js';
 import { parseImportFile } from './import.js';
 import { parseLocalDate } from './dateUtils.js';
+import { buildReportHtmlDocument } from './reportHtml.js';
 
 // Sentinel option value that triggers the "add a new category" prompt
 const ADD_NEW_CATEGORY_VALUE = '__add_new_category__';
@@ -970,8 +971,9 @@ function initPaymentModal() {
 }
 
 // MONTHLY REPORT MODAL
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
+// Renders the exact same shared HTML template (src/reportHtml.js) that the
+// monthly email's PDF is generated from, into an iframe, so what you print
+// here and what gets emailed are guaranteed to be the same document.
 function renderReport() {
   const picker = document.getElementById('report-month-picker');
   const [yearStr, monthStr] = picker.value.split('-');
@@ -979,78 +981,18 @@ function renderReport() {
   const month = parseInt(monthStr, 10) - 1;
 
   const data = store.generateMonthlyReportData(year, month, currentScope);
-  const body = document.getElementById('report-body');
+  const html = buildReportHtmlDocument(data, year, month);
 
-  const scopeLabel = { personal: 'Personal', business: 'Business', all: 'All Cards' }[data.scope];
-  const totalCombined = data.totalSpent + data.totalPayments;
-
-  let html = `
-    <div class="report-header">
-      <h2>${MONTH_NAMES[month]} ${year} -- ${scopeLabel}</h2>
-      <p>Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-    </div>
-
-    <div class="report-summary-stats">
-      <div class="report-summary-stat">
-        <div class="report-summary-stat-label">Total Purchases</div>
-        <div class="report-summary-stat-value">$${data.totalSpent.toFixed(2)}</div>
-      </div>
-      <div class="report-summary-stat">
-        <div class="report-summary-stat-label">Card Payments Made</div>
-        <div class="report-summary-stat-value">$${data.totalPayments.toFixed(2)}</div>
-      </div>
-      <div class="report-summary-stat">
-        <div class="report-summary-stat-label">Combined Cash Out</div>
-        <div class="report-summary-stat-value">$${totalCombined.toFixed(2)}</div>
-      </div>
-      <div class="report-summary-stat">
-        <div class="report-summary-stat-label">Cards With Activity</div>
-        <div class="report-summary-stat-value">${data.cardBreakdown.length}</div>
-      </div>
-    </div>
-  `;
-
-  if (data.cardBreakdown.length === 0 && data.unlinkedTransactions.length === 0) {
-    html += `<div class="report-empty-state">No transactions logged for ${MONTH_NAMES[month]} ${year}.</div>`;
-  } else {
-    const sections = [...data.cardBreakdown];
-    if (data.unlinkedTransactions.length > 0) {
-      sections.push({
-        card: { name: 'Unlinked Transactions', last4: '----', brand: '' },
-        transactions: data.unlinkedTransactions,
-        subtotal: data.unlinkedTransactions.reduce((s, t) => s + t.amount, 0)
-      });
+  const frame = document.getElementById('report-frame');
+  frame.srcdoc = html;
+  frame.onload = () => {
+    try {
+      const doc = frame.contentDocument;
+      frame.style.height = `${doc.documentElement.scrollHeight + 40}px`;
+    } catch (e) {
+      frame.style.height = '600px';
     }
-
-    sections.forEach(({ card, transactions, subtotal }) => {
-      html += `
-        <div class="report-card-section">
-          <div class="report-card-section-header">
-            <h4><i data-lucide="credit-card"></i> ${card.name}${card.last4 !== '----' ? ` (...${card.last4})` : ''}</h4>
-            <span class="report-card-section-total">$${subtotal.toFixed(2)}</span>
-          </div>
-          <table class="report-tx-table">
-            <thead>
-              <tr><th>Date</th><th>Merchant</th><th>Category</th><th style="text-align:right;">Amount</th></tr>
-            </thead>
-            <tbody>
-              ${transactions.map(tx => `
-                <tr>
-                  <td>${parseLocalDate(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
-                  <td>${tx.merchant}</td>
-                  <td>${getCategoryLabel(tx.category)}</td>
-                  <td style="text-align:right;">$${tx.amount.toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    });
-  }
-
-  body.innerHTML = html;
-  if (window.lucide) window.lucide.createIcons();
+  };
 }
 
 function initReportModal() {
@@ -1069,7 +1011,10 @@ function initReportModal() {
 
   btnClose.addEventListener('click', () => modal.classList.add('hidden'));
   picker.addEventListener('change', renderReport);
-  btnPrint.addEventListener('click', () => window.print());
+  btnPrint.addEventListener('click', () => {
+    const frame = document.getElementById('report-frame');
+    frame.contentWindow.print();
+  });
 }
 
 // AVATAR RENDERING: shows the user's real photo (Google sign-in) or a
