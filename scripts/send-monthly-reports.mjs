@@ -47,7 +47,8 @@ async function renderReportPdf(browser, report, year, month) {
 // in particular -- render HTML far less predictably than browsers and often
 // block remote images by default. The logo is a small CSS-styled letter
 // mark rather than an embedded SVG/image for the same reason.
-function buildReportEmailHtml(monthLabel) {
+function buildReportEmailHtml(monthLabel, name) {
+  const greetingName = name ? name.trim() : 'there';
   return `
     <div style="background:#f1f5f9;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
@@ -69,7 +70,7 @@ function buildReportEmailHtml(monthLabel) {
         </tr>
         <tr>
           <td style="padding:32px;color:#0f172a;font-size:14px;line-height:1.6;">
-            <p style="margin:0 0 16px;font-size:16px;font-weight:600;">Your ${monthLabel} report is ready</p>
+            <p style="margin:0 0 16px;font-size:16px;font-weight:600;">Hi ${greetingName},</p>
             <p style="margin:0 0 16px;color:#334155;">
               Attached is a PDF with your full ${monthLabel} spending breakdown across all cards, including category and card charts plus a complete transaction log.
             </p>
@@ -118,6 +119,8 @@ async function main() {
   try {
     for (const docSnap of usersSnapshot.docs) {
       const data = docSnap.data();
+      const settings = data.settings || {};
+      const name = settings.fullName || '';
 
       if (!data.userEmail) {
         skipped++;
@@ -139,7 +142,7 @@ async function main() {
           from: `"ApexWallet Tracker" <${process.env.GMAIL_USER}>`,
           to: data.userEmail,
           subject: `Your ${monthLabel} ApexWallet Report`,
-          html: buildReportEmailHtml(monthLabel),
+          html: buildReportEmailHtml(monthLabel, name),
           attachments: [{
             filename: `ApexWallet-Report-${monthLabel.replace(' ', '-')}.pdf`,
             content: pdfBuffer,

@@ -13,7 +13,8 @@ import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'url';
 
 // HTML Template for the welcome email
-function buildWelcomeEmailHtml(email) {
+function buildWelcomeEmailHtml(email, name) {
+  const greetingName = name ? name.trim() : 'there';
   return `
     <div style="background:#f8fafc;padding:40px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;line-height:1.6;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.03);border:1px solid #e2e8f0;">
@@ -40,8 +41,8 @@ function buildWelcomeEmailHtml(email) {
         <!-- Main Body -->
         <tr>
           <td style="padding:32px 32px 16px;">
-            <p style="margin:0 0 20px;font-size:15px;color:#334155;">
-              Hi there,
+            <p style="margin:0 0 20px;font-size:15px;color:#334155;font-weight:600;">
+              Hi ${greetingName},
             </p>
             <p style="margin:0 0 20px;font-size:15px;color:#334155;">
               Thank you for signing up for <strong>ApexWallet Tracker</strong>! We've designed this app to be a fully client-private, modern personal & business expense hub. 
@@ -159,6 +160,8 @@ async function main() {
   for (const docSnap of usersSnap.docs) {
     const data = docSnap.data();
     const email = data.userEmail;
+    const settings = data.settings || {};
+    const name = settings.fullName || '';
 
     if (!email) {
       // Mark it sent anyway so we do not loop on it
@@ -172,7 +175,7 @@ async function main() {
         from: `"ApexWallet Tracker" <${process.env.GMAIL_USER}>`,
         to: email,
         subject: 'Welcome to ApexWallet Tracker - Get Started!',
-        html: buildWelcomeEmailHtml(email)
+        html: buildWelcomeEmailHtml(email, name)
       });
 
       // Mark as sent

@@ -9,11 +9,12 @@ import {
   sendEmailVerification,
   applyActionCode
 } from 'firebase/auth';
-import { auth } from './firebase.js';
+import { auth, db } from './firebase.js';
+import { doc, setDoc } from 'firebase/firestore';
 
 const googleProvider = new GoogleAuthProvider();
 
-export async function signUp(email, password) {
+export async function signUp(email, password, fullName = '') {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   if (credential.user) {
     const actionCodeSettings = {
@@ -22,6 +23,38 @@ export async function signUp(email, password) {
       handleCodeInApp: false
     };
     await sendEmailVerification(credential.user, actionCodeSettings);
+
+    // Pre-create the user document in Firestore to persist their name immediately
+    const ref = doc(db, 'users', credential.user.uid);
+    await setDoc(ref, {
+      userEmail: email,
+      settings: {
+        theme: 'dark',
+        sidebarCollapsed: false,
+        notify: true,
+        monthlyReportEmailOptIn: false,
+        hasSeenTutorial: false,
+        welcomeEmailSent: false,
+        fullName: fullName
+      },
+      categoryBudgets: {
+        Groceries: 300,
+        Dining: 150,
+        Transport: 100,
+        Shopping: 200,
+        Utilities: 150,
+        Entertainment: 100,
+        Others: 200
+      },
+      businessCategoryBudgets: {
+        Office: 300,
+        Travel: 400,
+        Marketing: 500,
+        Software: 200,
+        Others: 200
+      },
+      customCategories: []
+    });
   }
   return credential;
 }

@@ -276,6 +276,12 @@ function renderAppUI() {
   const txs = store.getTransactionsForScope(currentScope);
   const cards = store.getCardsForScope(currentScope);
 
+  // Set welcome greeting with user's name
+  const greetingEl = document.getElementById('dashboard-welcome-greeting');
+  if (greetingEl) {
+    greetingEl.textContent = `Welcome, ${store.settings.fullName || 'User'}!`;
+  }
+
   // 1. DASHBOARD STAT CARDS
   document.getElementById('stat-total-spent').textContent = `$${metrics.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   document.getElementById('stat-percentage-change').textContent = `${metrics.percentageChange}%`;
@@ -1182,6 +1188,12 @@ function openProfileModal() {
     ? `Member since ${new Date(createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
     : '';
 
+  // Populate Display Name field
+  const nameInput = document.getElementById('profile-name-input');
+  if (nameInput) {
+    nameInput.value = store.settings.fullName || '';
+  }
+
   populateBudgetsGrid('budgets-grid', store.categoryBudgets, 'budget-input');
   populateBudgetsGrid('business-budgets-grid', store.businessCategoryBudgets, 'business-budget-input');
   updateNotificationStatusUI();
@@ -1225,6 +1237,39 @@ function initProfileModal() {
 
   btnOpenProfile?.addEventListener('click', openProfileModal);
   btnCloseProfile?.addEventListener('click', () => modalProfile.classList.add('hidden'));
+
+  // Save Display Name click listener
+  document.getElementById('btn-save-profile-name')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-save-profile-name');
+    const input = document.getElementById('profile-name-input');
+    if (!input || !btn || btn.disabled) return;
+
+    const newName = input.value.trim();
+    if (!newName) {
+      toastManager.show('Name Required', 'Please enter a name.', 'warning');
+      return;
+    }
+
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = 'Saving...';
+
+    try {
+      await store.updateSettings({ fullName: newName });
+      toastManager.show('Profile Updated', 'Your display name has been saved.', 'success');
+      
+      // Update welcome greeting instantly
+      const greetingEl = document.getElementById('dashboard-welcome-greeting');
+      if (greetingEl) {
+        greetingEl.textContent = `Welcome, ${newName}!`;
+      }
+    } catch (err) {
+      toastManager.show('Save Failed', err.message || 'Could not save your name.', 'warning');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = oldText;
+    }
+  });
 
   document.getElementById('btn-save-budgets')?.addEventListener('click', () => {
     const newBudgets = {};
@@ -1528,9 +1573,15 @@ function bindAuthGateEvents() {
   formSignup?.addEventListener('submit', (e) => {
     e.preventDefault();
     hideAuthErrors();
+    const name = document.getElementById('signup-name').value.trim();
     const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value;
     const passwordConfirm = document.getElementById('signup-password-confirm').value;
+
+    if (!name) {
+      showAuthError('signup-error', 'Please enter your full name.');
+      return;
+    }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -1558,7 +1609,7 @@ function bindAuthGateEvents() {
       return;
     }
 
-    signUp(email, password)
+    signUp(email, password, name)
       .then(async () => {
         document.getElementById('form-signup')?.reset();
         await signOutUser();
@@ -1733,7 +1784,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       currentAuthUser = user;
-      await store.initForUser(user.uid, user.email);
+      await store.initForUser(user.uid, user.email, user.displayName);
       if (myGeneration !== authGeneration) return; // superseded by a newer auth event
 
       const emailEl = document.getElementById('sidebar-user-email');

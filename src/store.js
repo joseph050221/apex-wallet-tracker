@@ -27,7 +27,8 @@ const DEFAULT_SETTINGS = {
   notify: true,
   monthlyReportEmailOptIn: false,
   hasSeenTutorial: false,
-  welcomeEmailSent: false
+  welcomeEmailSent: false,
+  fullName: ''
 };
 
 const DEVELOPER_EMAILS = [
@@ -133,7 +134,7 @@ class StateStore {
   // Load (or seed) state for a newly authenticated user. `email` is stored
   // alongside the data so the monthly report email script (which runs
   // outside the browser, via Firebase Admin SDK) knows where to send it.
-  async initForUser(uid, email = '') {
+  async initForUser(uid, email = '', googleDisplayName = '') {
     this.currentUid = uid;
     this.userEmail = email;
     this.ready = false;
@@ -165,9 +166,19 @@ class StateStore {
         this.categoryBudgets = data.categoryBudgets || { ...DEFAULT_BUDGETS };
         this.businessCategoryBudgets = data.businessCategoryBudgets || { ...DEFAULT_BUDGETS };
         this.customCategories = data.customCategories || [];
+
+        // Save Google display name if no name is currently persisted
+        if (!this.settings.fullName && googleDisplayName) {
+          this.settings.fullName = googleDisplayName;
+          this.writeCount++;
+          await setDoc(ref, { settings: { fullName: googleDisplayName } }, { merge: true });
+        }
       } else {
         // First-ever login for this account: start with a clean slate
         this.settings = { ...DEFAULT_SETTINGS };
+        if (googleDisplayName) {
+          this.settings.fullName = googleDisplayName;
+        }
         this.categoryBudgets = { ...DEFAULT_BUDGETS };
         this.businessCategoryBudgets = { ...DEFAULT_BUDGETS };
         this.customCategories = [];
