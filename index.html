@@ -7,15 +7,15 @@
     <!-- Title Tag for SEO -->
     <title>ApexWallet Tracker - Premium Expense Analytics</title>
     <!-- Meta Description for SEO -->
-    <meta name="description" content="Manage your credit cards, track and analyze your monthly spending, and log transactions with an interactive payment simulator." />
+    <meta name="description" content="Manage your credit cards, track and analyze your monthly spending, and log expenses with custom categories and budgets." />
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons Script -->
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-C3EKQP82.js"></script>
-    <link rel="stylesheet" crossorigin href="/apex-wallet-tracker/assets/index-0xpWEiX6.css">
+    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-CNlrszYB.js"></script>
+    <link rel="stylesheet" crossorigin href="/apex-wallet-tracker/assets/index-D6jL9tVE.css">
   </head>
   <body class="dark-theme">
     <!-- Background Animated Blobs for Aesthetics -->
@@ -112,11 +112,6 @@
           <button class="nav-item" data-tab="analytics" id="btn-nav-analytics">
             <i data-lucide="trending-up"></i>
             <span>Analytics</span>
-          </button>
-          <button class="nav-item simulator-nav-btn" data-tab="simulator" id="btn-nav-simulator">
-            <i data-lucide="cpu" class="simulator-pulse"></i>
-            <span>Payment Simulator</span>
-            <span class="badge badge-accent">Live</span>
           </button>
         </nav>
 
@@ -237,18 +232,6 @@
                 <div class="cards-preview-scroll" id="cards-scroll-container">
                   <!-- Cards dynamically inserted by JS -->
                 </div>
-
-                <!-- Action section to encourage simulator -->
-                <div class="simulator-promo-box">
-                  <div class="promo-content">
-                    <h3>Try the Payment Simulator</h3>
-                    <p>Generate sample transactions with a fun NFC tap-to-pay demo at our simulated merchant terminals!</p>
-                  </div>
-                  <button class="btn btn-accent btn-sm" id="btn-goto-simulator">
-                    <span>Open Simulator</span>
-                    <i data-lucide="arrow-right"></i>
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -262,14 +245,7 @@
                     <input type="text" placeholder="Search merchants..." id="input-search-transactions">
                   </div>
                   <select class="select-filter" id="select-filter-category">
-                    <option value="">All Categories</option>
-                    <option value="Dining">Dining</option>
-                    <option value="Shopping">Shopping</option>
-                    <option value="Transport">Transport</option>
-                    <option value="Entertainment">Entertainment</option>
-                    <option value="Bills">Bills & Services</option>
-                    <option value="Groceries">Groceries</option>
-                    <option value="Travel">Travel</option>
+                    <!-- Filled dynamically by JS -->
                   </select>
                 </div>
               </div>
@@ -357,140 +333,6 @@
             </div>
           </section>
 
-          <!-- TAB: PAYMENT SIMULATOR -->
-          <section id="tab-simulator" class="tab-panel">
-            <div class="simulator-layout-grid">
-
-              <!-- Left: Description and instructions -->
-              <div class="simulator-info glass-panel">
-                <h2>Payment Simulator Terminal</h2>
-                <p class="panel-desc">Generate sample transactions with a fun NFC tap-to-pay sandbox — no real bank or card network is involved.</p>
-
-                <div class="simulator-guide-steps">
-                  <div class="guide-step">
-                    <div class="step-num">1</div>
-                    <div class="step-text">Select one of your cards from the virtual phone.</div>
-                  </div>
-                  <div class="guide-step">
-                    <div class="step-num">2</div>
-                    <div class="step-text">Choose a merchant, transaction amount, and category on the POS Terminal.</div>
-                  </div>
-                  <div class="guide-step">
-                    <div class="step-num">3</div>
-                    <div class="step-text">Click <strong>"Tap to Pay"</strong>.</div>
-                  </div>
-                  <div class="guide-step">
-                    <div class="step-num">4</div>
-                    <div class="step-text">Experience the NFC sound effect, notification banner, and instant chart sync!</div>
-                  </div>
-                </div>
-
-                <div class="simulator-log-console">
-                  <h3>Simulator System Console</h3>
-                  <div class="console-box" id="simulator-console-log">
-                    <div class="console-line system">[SYSTEM] Simulator initialized. Awaiting user tap...</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Right: Visual Simulation Device & Terminal -->
-              <div class="simulator-workspace glass-panel">
-                
-                <!-- Phone Simulator -->
-                <div class="phone-mockup">
-                  <div class="phone-notch"></div>
-                  <div class="phone-screen">
-                    <div class="phone-header">
-                      <span class="phone-time">16:40</span>
-                      <div class="phone-icons">
-                        <i data-lucide="wifi"></i>
-                        <i data-lucide="battery"></i>
-                      </div>
-                    </div>
-
-                    <div class="phone-app-content">
-                      <div class="google-pay-logo">
-                        <i data-lucide="wallet"></i> <span>ApexWallet</span>
-                      </div>
-
-                      <div class="phone-cards-stack-wrapper">
-                        <div class="phone-card-preview-slider" id="phone-wallet-cards-list">
-                          <!-- Phone cards dynamic selection list -->
-                        </div>
-                      </div>
-
-                      <div class="phone-instruction">
-                        <i data-lucide="nfc" class="nfc-pulse-icon"></i>
-                        <p>Hold near terminal to pay</p>
-                        <span class="card-selected-name" id="selected-card-label">Visa ...4242</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- NFC Pulse Wave Effect -->
-                <div class="nfc-pulse-wave-connector">
-                  <div class="nfc-pulse-wave" id="nfc-pulse-wave-effect">
-                    <div class="circle circle-1"></div>
-                    <div class="circle circle-2"></div>
-                    <div class="circle circle-3"></div>
-                  </div>
-                </div>
-
-                <!-- POS Payment Terminal Simulator -->
-                <div class="pos-mockup">
-                  <div class="pos-screen-panel">
-                    <div class="pos-merchant-logo" id="pos-terminal-display-merchant">Starbucks Coffee</div>
-                    <div class="pos-amount-display" id="pos-terminal-display-amount">$4.75</div>
-                    <div class="pos-status-display" id="pos-terminal-status">READY TO TAP</div>
-                  </div>
-
-                  <div class="pos-controls">
-                    <div class="control-row">
-                      <label>Merchant</label>
-                      <select class="select-simulator-input" id="sim-input-merchant">
-                        <option value="Starbucks" data-amount="4.75" data-category="Dining">Starbucks Coffee</option>
-                        <option value="Uber" data-amount="18.30" data-category="Transport">Uber Ride</option>
-                        <option value="Target" data-amount="42.99" data-category="Shopping">Target Stores</option>
-                        <option value="Netflix" data-amount="15.49" data-category="Entertainment">Netflix Subscription</option>
-                        <option value="Chevron" data-amount="35.00" data-category="Transport">Chevron Fuel</option>
-                        <option value="Delta Air Lines" data-amount="249.50" data-category="Travel">Delta Air Lines</option>
-                        <option value="Whole Foods" data-amount="72.10" data-category="Groceries">Whole Foods</option>
-                        <option value="ConEd Utility" data-amount="112.40" data-category="Bills">ConEd Electricity</option>
-                      </select>
-                    </div>
-
-                    <div class="control-row-grid">
-                      <div class="control-subrow">
-                        <label>Amount ($)</label>
-                        <input type="number" step="0.01" class="select-simulator-input" id="sim-input-amount" value="4.75">
-                      </div>
-                      <div class="control-subrow">
-                        <label>Category</label>
-                        <select class="select-simulator-input" id="sim-input-category">
-                          <option value="Dining">Dining</option>
-                          <option value="Shopping">Shopping</option>
-                          <option value="Transport">Transport</option>
-                          <option value="Entertainment">Entertainment</option>
-                          <option value="Bills">Bills & Services</option>
-                          <option value="Groceries">Groceries</option>
-                          <option value="Travel">Travel</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <button class="btn btn-accent btn-block" id="btn-sim-tap-pay">
-                      <i data-lucide="nfc"></i>
-                      <span>Tap to Pay</span>
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </section>
-
         </div>
       </main>
 
@@ -519,13 +361,7 @@
               <div class="form-group">
                 <label for="form-category">Category</label>
                 <select id="form-category" required>
-                  <option value="Dining">Dining</option>
-                  <option value="Shopping">Shopping</option>
-                  <option value="Transport">Transport</option>
-                  <option value="Entertainment">Entertainment</option>
-                  <option value="Bills">Bills & Services</option>
-                  <option value="Groceries">Groceries</option>
-                  <option value="Travel">Travel</option>
+                  <!-- Filled dynamically by JS -->
                 </select>
               </div>
             </div>
@@ -581,6 +417,11 @@
                 <label for="form-card-last4">Last 4 Digits</label>
                 <input type="text" maxlength="4" minlength="4" pattern="\d{4}" id="form-card-last4" required placeholder="4242">
               </div>
+            </div>
+
+            <div class="form-group">
+              <label for="form-card-limit">Credit Limit ($)</label>
+              <input type="number" min="0" step="1" id="form-card-limit" required placeholder="10000">
             </div>
 
             <div class="form-group">
@@ -664,10 +505,6 @@
         <button class="mobile-nav-item" data-tab="analytics">
           <i data-lucide="trending-up"></i>
           <span>Trends</span>
-        </button>
-        <button class="mobile-nav-item" data-tab="simulator">
-          <i data-lucide="cpu"></i>
-          <span>Simulator</span>
         </button>
       </nav>
 
