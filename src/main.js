@@ -7,11 +7,6 @@ import {
   updateChartThemes
 } from './charts.js';
 import {
-  initSimulator,
-  renderPhoneCards,
-  logToConsole
-} from './simulator.js';
-import {
   signUp,
   signIn,
   signInWithGoogle,
@@ -20,8 +15,10 @@ import {
   onAuthChange,
   authErrorMessage
 } from './auth.js';
+import { CATEGORIES, getCategoryColor, getCategoryLabel, hexToRgba } from './categories.js';
 
-const CATEGORIES = ['Dining', 'Shopping', 'Transport', 'Entertainment', 'Bills', 'Groceries', 'Travel'];
+// Sentinel option value that triggers the "add a new category" prompt
+const ADD_NEW_CATEGORY_VALUE = '__add_new_category__';
 
 // The currently signed-in Firebase user object (set by the auth listener)
 let currentAuthUser = null;
@@ -137,9 +134,6 @@ export function triggerSmartAlert(alert) {
 
   // 3. Trigger Browser Web Notification
   triggerPushNotification(alert.title, alert.message);
-
-  // 4. Log alert to simulator system console (if open)
-  logToConsole(`[ALERT] ${alert.title}: ${alert.message}`, alert.severity === 'error' ? 'warning' : 'system');
 }
 
 // TAB SYSTEM NAVIGATION
@@ -152,15 +146,13 @@ function initTabNavigation() {
   const subtitles = {
     dashboard: 'Overview of your transactions',
     wallet: 'Manage your credit cards and payment methods',
-    analytics: 'Deep dive into spending timeline and categorical distribution',
-    simulator: 'Interactive sandbox terminal for simulating NFC payments'
+    analytics: 'Deep dive into spending timeline and categorical distribution'
   };
 
   const titles = {
     dashboard: 'Dashboard',
     wallet: 'My Cards',
-    analytics: 'Analytics',
-    simulator: 'Payment Simulator'
+    analytics: 'Analytics'
   };
 
   navItems.forEach(item => {
@@ -207,10 +199,6 @@ function initTabNavigation() {
   // Short-cuts
   document.getElementById('btn-view-analytics-shortcut')?.addEventListener('click', () => {
     document.querySelector('[data-tab="analytics"]').click();
-  });
-
-  document.getElementById('btn-goto-simulator')?.addEventListener('click', () => {
-    document.querySelector('[data-tab="simulator"]').click();
   });
 }
 
@@ -272,10 +260,7 @@ function renderAppUI() {
   // 5. RENDER WALLET TAB DETAILS
   renderWalletTabDetails(cards);
 
-  // 6. PHONE CARDS INSIDE PAYMENT SIMULATOR
-  renderPhoneCards(cards);
-
-  // 7. DRAW CHARTS
+  // 6. DRAW CHARTS
   renderDonutChart(metrics);
   renderTrendChart(txs, 'month');
   renderCardChart(cards, txs);
@@ -402,8 +387,9 @@ function renderTransactionsLedger() {
     const txDate = new Date(tx.date);
     const formattedDate = txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-    // Choose class color for categories
-    const catClass = tx.category.toLowerCase().replace(' & ', '-');
+    // Category color (built-in categories keep their fixed color; custom
+    // categories get a deterministic color from the shared palette)
+    const catColor = getCategoryColor(tx.category);
 
     // Icon based on how the transaction was logged
     const sourceIcon = tx.source === 'Manual Input' ? 'edit-2' : 'nfc';
@@ -422,11 +408,11 @@ function renderTransactionsLedger() {
         </div>
       </td>
       <td>
-        <span class="badge-category ${catClass}">${tx.category}</span>
+        <span class="badge-category" style="background-color: ${hexToRgba(catColor, 0.1)}; color: ${catColor};">${getCategoryLabel(tx.category)}</span>
       </td>
       <td>
         <div class="card-used-badge">
-          <div class="card-indicator-dot" style="background-color: var(--color-${catClass});"></div>
+          <div class="card-indicator-dot" style="background-color: ${catColor};"></div>
           <span>${cardLabel}</span>
         </div>
       </td>
@@ -485,21 +471,21 @@ function renderCategoryProgressList(metrics) {
 
   sortedCats.forEach(([catName, amount]) => {
     const pct = ((amount / total) * 100).toFixed(0);
-    const catClass = catName.toLowerCase().replace(' & ', '-');
+    const catColor = getCategoryColor(catName);
 
     const item = document.createElement('div');
     item.className = 'category-list-item';
     item.innerHTML = `
       <div class="category-item-meta">
         <span class="category-item-name">
-          <span class="category-dot" style="background-color: var(--color-${catClass});"></span>
-          <span>${catName}</span>
+          <span class="category-dot" style="background-color: ${catColor};"></span>
+          <span>${getCategoryLabel(catName)}</span>
           <span class="category-item-pct">${pct}%</span>
         </span>
         <span class="category-item-amount">$${amount.toFixed(2)}</span>
       </div>
       <div class="category-progress-bar-bg">
-        <div class="category-progress-bar-fill" style="width: ${pct}%; background-color: var(--color-${catClass});"></div>
+        <div class="category-progress-bar-fill" style="width: ${pct}%; background-color: ${catColor};"></div>
       </div>
     `;
     container.appendChild(item);
@@ -527,7 +513,8 @@ function renderWalletTabDetails(cards) {
     const item = document.createElement('div');
     item.className = 'card-manage-item';
 
-    const limitPct = card.limit > 0 ? ((card.balance / card.limit) * 100).toFixed(0) : 0;
+    const limitPct = card.limit > 0 ? ((card.balance / card.limit) * 100) : 0;
+    const usageColor = limitPct >= 90 ? 'var(--danger)' : limitPct >= 75 ? '#f59e0b' : 'var(--accent)';
 
     item.innerHTML = `
       <div class="card-manage-visual ${card.color}">
@@ -539,8 +526,13 @@ function renderWalletTabDetails(cards) {
         <span class="card-manage-title">${card.name}</span>
         <div class="card-manage-meta">
           <span>Spent: <strong class="card-manage-spend">$${card.balance.toFixed(2)}</strong></span>
-          ${card.limit > 0 ? `<span>Limit: $${card.limit.toLocaleString()} (${limitPct}%)</span>` : '<span>Limit: Uncapped</span>'}
+          ${card.limit > 0 ? `<span>Limit: $${card.limit.toLocaleString()} (${limitPct.toFixed(0)}%)</span>` : '<span>Limit: Uncapped</span>'}
         </div>
+        ${card.limit > 0 ? `
+          <div class="card-usage-bar-bg">
+            <div class="card-usage-bar-fill" style="width: ${Math.min(limitPct, 100)}%; background-color: ${usageColor};"></div>
+          </div>
+        ` : ''}
       </div>
 
       <div class="card-manage-actions">
@@ -587,12 +579,12 @@ function renderAnalyticsTrend(range = 'month') {
     categoryCounts[tx.category] = (categoryCounts[tx.category] || 0) + 1;
   });
 
-  CATEGORIES.forEach(cat => {
+  [...CATEGORIES, ...store.customCategories].forEach(cat => {
     const totalSpent = metrics.categoryTotals[cat] || 0.00;
     const count = categoryCounts[cat] || 0;
-    const catClass = cat.toLowerCase().replace(' & ', '-');
+    const catColor = getCategoryColor(cat);
 
-    // Category icon mapping (for visual decoration)
+    // Category icon mapping (for visual decoration; custom categories fall back to dollar-sign)
     let icon = 'dollar-sign';
     if (cat === 'Dining') icon = 'coffee';
     if (cat === 'Shopping') icon = 'shopping-bag';
@@ -607,10 +599,10 @@ function renderAnalyticsTrend(range = 'month') {
     card.innerHTML = `
       <div class="cat-card-header">
         <div class="cat-card-title">
-          <div class="cat-card-icon" style="background-color: var(--color-${catClass}); color:#fff;">
+          <div class="cat-card-icon" style="background-color: ${catColor}; color:#fff;">
             <i data-lucide="${icon}"></i>
           </div>
-          <span>${cat}</span>
+          <span>${getCategoryLabel(cat)}</span>
         </div>
         <span class="cat-stat-count">${count} txs</span>
       </div>
@@ -618,7 +610,7 @@ function renderAnalyticsTrend(range = 'month') {
       <div class="cat-card-stats">
         <div>
           <div class="cat-stat-lbl">Total Spent</div>
-          <div class="cat-stat-val" style="color: var(--color-${catClass});">$${totalSpent.toFixed(2)}</div>
+          <div class="cat-stat-val" style="color: ${catColor};">$${totalSpent.toFixed(2)}</div>
         </div>
         <div>
           <div class="cat-stat-lbl">Daily Avg</div>
@@ -631,6 +623,39 @@ function renderAnalyticsTrend(range = 'month') {
 
   if (window.lucide) {
     window.lucide.createIcons();
+  }
+}
+
+// Populates a <select> with built-in + custom categories, preserving the
+// currently selected value if it still exists after repopulating.
+function populateCategorySelect(select, { includeAllOption = false, includeAddNew = false } = {}) {
+  if (!select) return;
+  const previousValue = select.value;
+  select.innerHTML = '';
+
+  if (includeAllOption) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'All Categories';
+    select.appendChild(opt);
+  }
+
+  [...CATEGORIES, ...store.customCategories].forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = getCategoryLabel(cat);
+    select.appendChild(opt);
+  });
+
+  if (includeAddNew) {
+    const opt = document.createElement('option');
+    opt.value = ADD_NEW_CATEGORY_VALUE;
+    opt.textContent = '+ Add New Category';
+    select.appendChild(opt);
+  }
+
+  if ([...select.options].some(o => o.value === previousValue)) {
+    select.value = previousValue;
   }
 }
 
@@ -661,6 +686,7 @@ function populateModalCardsDropdown() {
 // Opens the expense modal. Pass a transaction to edit it, or omit to add a new one.
 function openExpenseModal(tx = null) {
   populateModalCardsDropdown();
+  populateCategorySelect(document.getElementById('form-category'), { includeAddNew: true });
   editingTransactionId = tx ? tx.id : null;
 
   const title = document.getElementById('expense-modal-title');
@@ -700,11 +726,13 @@ function openCardModal(card = null) {
     document.getElementById('form-card-name').value = card.name;
     document.getElementById('form-card-brand').value = card.brand;
     document.getElementById('form-card-last4').value = card.last4;
+    document.getElementById('form-card-limit').value = card.limit;
     document.getElementById('form-card-color').value = card.color;
   } else {
     title.textContent = 'Add New Payment Card';
     saveBtn.textContent = 'Add Card';
     document.getElementById('form-add-card').reset();
+    document.getElementById('form-card-limit').value = 10000;
   }
 
   document.getElementById('modal-add-card').classList.remove('hidden');
@@ -739,9 +767,9 @@ function populateBudgetsGrid() {
   const container = document.getElementById('budgets-grid');
   if (!container) return;
 
-  container.innerHTML = CATEGORIES.map(cat => `
+  container.innerHTML = [...CATEGORIES, ...store.customCategories].map(cat => `
     <div class="form-group">
-      <label for="budget-input-${cat}">${cat}</label>
+      <label for="budget-input-${cat}">${getCategoryLabel(cat)}</label>
       <input type="number" min="0" step="1" id="budget-input-${cat}" value="${store.categoryBudgets[cat] || 0}">
     </div>
   `).join('');
@@ -802,7 +830,7 @@ function initProfileModal() {
 
   document.getElementById('btn-save-budgets')?.addEventListener('click', () => {
     const newBudgets = {};
-    CATEGORIES.forEach(cat => {
+    [...CATEGORIES, ...store.customCategories].forEach(cat => {
       const input = document.getElementById(`budget-input-${cat}`);
       newBudgets[cat] = parseFloat(input.value) || 0;
     });
@@ -893,6 +921,21 @@ function initModals() {
     renderAppUI();
   });
 
+  // "+ Add New Category" — prompts for a name, adds it, and selects it
+  document.getElementById('form-category')?.addEventListener('change', (e) => {
+    if (e.target.value !== ADD_NEW_CATEGORY_VALUE) return;
+
+    const name = prompt('New category name:');
+    if (name && name.trim()) {
+      const added = store.addCustomCategory(name);
+      populateCategorySelect(e.target, { includeAddNew: true });
+      e.target.value = added;
+      populateCategorySelect(document.getElementById('select-filter-category'), { includeAllOption: true });
+    } else {
+      e.target.value = CATEGORIES[0];
+    }
+  });
+
   // ADD/EDIT CARD POPUP MODAL
   const modalAddCard = document.getElementById('modal-add-card');
   const btnAddCardOpen = document.getElementById('btn-add-card');
@@ -912,19 +955,14 @@ function initModals() {
     const name = document.getElementById('form-card-name').value;
     const brand = document.getElementById('form-card-brand').value;
     const last4 = document.getElementById('form-card-last4').value;
+    const limit = document.getElementById('form-card-limit').value;
     const color = document.getElementById('form-card-color').value;
 
     if (editingCardId) {
-      store.updateCard(editingCardId, { name, brand, last4, color });
+      store.updateCard(editingCardId, { name, brand, last4, color, limit });
       toastManager.show('Card Updated', `Saved changes to ${name}`, 'success');
     } else {
-      store.addCard({
-        name,
-        brand,
-        last4,
-        color,
-        limit: 10000 // Default limit
-      });
+      store.addCard({ name, brand, last4, color, limit });
       toastManager.show('Card Added', `Added ${name} (...${last4}) to your account`, 'success');
     }
 
@@ -939,6 +977,8 @@ function initModals() {
 function initLedgerFilters() {
   const searchInput = document.getElementById('input-search-transactions');
   const selectFilter = document.getElementById('select-filter-category');
+
+  populateCategorySelect(selectFilter, { includeAllOption: true });
 
   searchInput.addEventListener('input', () => {
     renderTransactionsLedger();
@@ -1090,14 +1130,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initLedgerFilters();
         bindSidebarToggle();
         bindLogoutButton();
-        initSimulator(toastManager, (newTx, alerts) => {
-          renderAppUI();
-          if (alerts && alerts.length > 0) {
-            setTimeout(() => {
-              alerts.forEach(alert => triggerSmartAlert(alert));
-            }, 350);
-          }
-        });
         appInitialized = true;
       }
 
@@ -1106,7 +1138,6 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAppUI();
 
       showApp();
-      logToConsole('Welcome to ApexWallet Tracker. Click simulator cards to select.', 'system');
     } else {
       currentAuthUser = null;
       store.clearForLogout();

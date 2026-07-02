@@ -1,23 +1,11 @@
 // Chart Manager using Chart.js Auto-Registration
 import Chart from 'chart.js/auto';
+import { getCategoryColor } from './categories.js';
 
 // Global references to Chart instances
 let donutChart = null;
 let trendChart = null;
 let distributionChart = null;
-
-// Category colors matching CSS variables
-const CATEGORY_COLORS = {
-  Dining: '#f59e0b',
-  Shopping: '#ec4899',
-  Transport: '#3b82f6',
-  Entertainment: '#8b5cf6',
-  Bills: '#10b981',
-  Groceries: '#06b6d4',
-  Travel: '#f43f5e'
-};
-
-const DEFAULT_COLOR = '#6b7280';
 
 // Helper to get text/grid colors depending on active theme
 function getThemeColors() {
@@ -38,7 +26,7 @@ export function renderDonutChart(metrics) {
 
   const categories = Object.keys(metrics.categoryTotals);
   const dataValues = Object.values(metrics.categoryTotals);
-  const backgroundColors = categories.map(cat => CATEGORY_COLORS[cat] || DEFAULT_COLOR);
+  const backgroundColors = categories.map(cat => getCategoryColor(cat));
 
   const totalCount = metrics.totalSpent;
   document.getElementById('donut-total-count').textContent = `$${totalCount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

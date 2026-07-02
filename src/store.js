@@ -2,6 +2,7 @@
 
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase.js';
+import { CATEGORIES } from './categories.js';
 
 const DEFAULT_BUDGETS = {
   Dining: 180,
@@ -27,6 +28,7 @@ class StateStore {
     this.transactions = [];
     this.settings = { ...DEFAULT_SETTINGS };
     this.categoryBudgets = DEFAULT_BUDGETS;
+    this.customCategories = [];
     this.listeners = [];
   }
 
@@ -48,7 +50,8 @@ class StateStore {
       cards: this.cards,
       transactions: this.transactions,
       settings: this.settings,
-      categoryBudgets: this.categoryBudgets
+      categoryBudgets: this.categoryBudgets,
+      customCategories: this.customCategories
     };
   }
 
@@ -67,12 +70,14 @@ class StateStore {
         this.transactions = data.transactions || [];
         this.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
         this.categoryBudgets = data.categoryBudgets || DEFAULT_BUDGETS;
+        this.customCategories = data.customCategories || [];
       } else {
         // First-ever login for this account: start with a clean slate
         this.cards = [];
         this.transactions = [];
         this.settings = { ...DEFAULT_SETTINGS };
         this.categoryBudgets = DEFAULT_BUDGETS;
+        this.customCategories = [];
         await setDoc(ref, this._snapshotState());
       }
     } catch (e) {
@@ -81,6 +86,7 @@ class StateStore {
       this.transactions = [];
       this.settings = { ...DEFAULT_SETTINGS };
       this.categoryBudgets = DEFAULT_BUDGETS;
+      this.customCategories = [];
     }
 
     this.ready = true;
@@ -95,6 +101,7 @@ class StateStore {
     this.transactions = [];
     this.settings = { ...DEFAULT_SETTINGS };
     this.categoryBudgets = DEFAULT_BUDGETS;
+    this.customCategories = [];
     this.notifyListeners();
   }
 
@@ -281,7 +288,7 @@ class StateStore {
   }
 
   // Edit an existing card's details
-  updateCard(cardId, { name, brand, last4, color }) {
+  updateCard(cardId, { name, brand, last4, color, limit }) {
     const card = this.cards.find(c => c.id === cardId);
     if (!card) return false;
 
@@ -289,6 +296,9 @@ class StateStore {
     card.brand = brand.toLowerCase();
     card.last4 = last4;
     card.color = color || card.color;
+    if (limit !== undefined && limit !== '') {
+      card.limit = parseFloat(limit) || 0;
+    }
 
     this.saveState();
     return true;
@@ -320,6 +330,21 @@ class StateStore {
   updateCategoryBudgets(newBudgets) {
     this.categoryBudgets = { ...this.categoryBudgets, ...newBudgets };
     this.saveState();
+  }
+
+  // Add a user-defined category. Returns the canonical name (existing match if
+  // already present, case-insensitively, among built-in or custom categories).
+  addCustomCategory(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+
+    const existing = [...CATEGORIES, ...this.customCategories]
+      .find(c => c.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+
+    this.customCategories.push(trimmed);
+    this.saveState();
+    return trimmed;
   }
 
   // Permanently delete this account's Firestore document

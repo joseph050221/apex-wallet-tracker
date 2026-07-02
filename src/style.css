@@ -207,33 +207,6 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   filter: drop-shadow(0 0 6px var(--primary-glow));
 }
 
-.simulator-nav-btn {
-  position: relative;
-}
-
-.simulator-pulse {
-  animation: sim-nav-glow 2.5s infinite alternate;
-}
-
-@keyframes sim-nav-glow {
-  0% { filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.1)); }
-  100% { filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6)); }
-}
-
-.badge {
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 20px;
-  margin-left: auto;
-}
-
-.badge-accent {
-  background-color: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 8px var(--accent-glow);
-}
-
 .sidebar-footer {
   border-top: 1px solid var(--border-color);
   padding-top: 16px;
@@ -857,31 +830,6 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   color: var(--accent);
 }
 
-.simulator-promo-box {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%);
-  border: 1px dashed var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 16px;
-  gap: 16px;
-}
-
-.promo-content h3 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.promo-content p {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-  line-height: 1.4;
-}
-
 /* TRANSACTION LEDGER TABLE */
 .dashboard-ledger {
   margin-top: 32px;
@@ -1203,6 +1151,20 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   gap: 12px;
 }
 
+.card-usage-bar-bg {
+  height: 5px;
+  background-color: var(--secondary);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.card-usage-bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.6s ease;
+}
+
 .card-manage-spend {
   font-weight: 600;
   color: var(--text-primary);
@@ -1519,372 +1481,6 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   color: var(--text-secondary);
 }
 
-/* TAB: WALLET SIMULATOR PANELS */
-.simulator-layout-grid {
-  display: grid;
-  grid-template-columns: 0.8fr 1.2fr;
-  gap: 32px;
-}
-
-@media (max-width: 1024px) {
-  .simulator-layout-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.simulator-guide-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.guide-step {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
-
-.step-num {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: var(--primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px var(--primary-glow);
-}
-
-.step-text {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.simulator-log-console {
-  margin-top: 32px;
-}
-
-.simulator-log-console h3 {
-  font-size: 14px;
-  margin-bottom: 12px;
-  color: var(--text-secondary);
-}
-
-.console-box {
-  background-color: #05060b;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  height: 150px;
-  padding: 12px;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 12px;
-  overflow-y: auto;
-  color: #a7f3d0;
-}
-
-.console-line {
-  margin-bottom: 6px;
-  line-height: 1.4;
-  white-space: pre-wrap;
-}
-
-.console-line.system { color: var(--text-muted); }
-.console-line.success { color: var(--accent); }
-.console-line.warning { color: var(--color-dining); }
-
-.simulator-workspace {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 40px;
-  flex-wrap: wrap;
-  padding: 40px 20px;
-  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
-}
-
-/* SMARTPHONE MOCKUP styling */
-.phone-mockup {
-  width: 230px;
-  height: 460px;
-  border-radius: 36px;
-  background-color: #0f111a;
-  border: 8px solid #2d3142;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.05);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.phone-notch {
-  width: 100px;
-  height: 18px;
-  background-color: #2d3142;
-  border-radius: 0 0 14px 14px;
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-}
-
-.phone-screen {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  padding-top: 24px;
-  background-color: #0a0b10;
-  color: #fff;
-  position: relative;
-}
-
-.phone-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: rgba(255,255,255,0.7);
-  padding: 0 6px 12px 6px;
-}
-
-.phone-icons {
-  display: flex;
-  gap: 4px;
-}
-.phone-icons i {
-  width: 10px;
-  height: 10px;
-}
-
-.phone-app-content {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-}
-
-.google-pay-logo {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
-}
-
-.google-pay-logo .g-color {
-  color: #4285F4;
-}
-
-/* Card Selection list in phone screen */
-.phone-cards-stack-wrapper {
-  width: 100%;
-  height: 200px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-}
-
-.phone-card-preview-slider {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.phone-card-item {
-  width: 180px;
-  height: 114px;
-  border-radius: 10px;
-  position: absolute;
-  left: 50%;
-  margin-left: -90px;
-  top: 40px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-  cursor: pointer;
-  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s, z-index 0s;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* Fan arrangement of stacking cards in phone wallet */
-.phone-card-item.stack-0 {
-  transform: translate3d(0, 0, 0) scale(1);
-  z-index: 4;
-}
-.phone-card-item.stack-1 {
-  transform: translate3d(0, -20px, 0) scale(0.92);
-  opacity: 0.8;
-  z-index: 3;
-}
-.phone-card-item.stack-2 {
-  transform: translate3d(0, -40px, 0) scale(0.84);
-  opacity: 0.5;
-  z-index: 2;
-}
-.phone-card-item.stack-3 {
-  transform: translate3d(0, -60px, 0) scale(0.76);
-  opacity: 0.2;
-  z-index: 1;
-}
-
-.phone-card-item.active-slide {
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 10px 24px var(--primary-glow);
-}
-
-.phone-card-item .mini-last4 {
-  font-family: monospace;
-  font-size: 11px;
-  color: #fff;
-}
-.phone-card-item .mini-card-brand {
-  font-size: 10px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.8);
-}
-
-.phone-instruction {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.nfc-pulse-icon {
-  width: 32px;
-  height: 32px;
-  color: var(--accent);
-  animation: nfc-wave 1.5s infinite ease-in-out;
-}
-
-@keyframes nfc-wave {
-  0% { transform: scale(0.9); opacity: 0.5; }
-  50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 6px var(--accent-glow)); }
-  100% { transform: scale(0.9); opacity: 0.5; }
-}
-
-.phone-instruction p {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-
-.card-selected-name {
-  font-size: 11px;
-  font-weight: 600;
-  color: #fff;
-  background-color: rgba(255,255,255,0.06);
-  padding: 4px 10px;
-  border-radius: 12px;
-}
-
-/* POS TERMINAL style */
-.pos-mockup {
-  width: 250px;
-  background-color: #1a1e2e;
-  border: 4px solid #333852;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 15px 30px rgba(0,0,0,0.5);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.pos-screen-panel {
-  background-color: #070913;
-  border: 2px solid #232840;
-  border-radius: 8px;
-  padding: 16px;
-  text-align: center;
-  font-family: monospace;
-}
-
-.pos-merchant-logo {
-  font-size: 12px;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pos-amount-display {
-  font-size: 32px;
-  font-weight: 700;
-  color: #10B981;
-  text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
-  margin-bottom: 10px;
-}
-
-.pos-status-display {
-  font-size: 11px;
-  color: #f59e0b;
-  letter-spacing: 1px;
-  animation: blink-status 1.2s infinite alternate;
-}
-
-@keyframes blink-status {
-  0% { opacity: 0.6; }
-  100% { opacity: 1; }
-}
-
-.pos-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.control-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.control-row-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.control-subrow {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.pos-controls label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-}
-
-.select-simulator-input {
-  background-color: #0a0b12;
-  border: 1px solid #2b304d;
-  color: #fff;
-  border-radius: 8px;
-  padding: 8px;
-  font-size: 13px;
-  outline: none;
-}
-.select-simulator-input:focus {
-  border-color: var(--primary);
-}
-
 /* DIALOG MODAL LAYOUT */
 .modal-backdrop {
   position: fixed;
@@ -1905,6 +1501,8 @@ h1, h2, h3, h4, h5, h6, .logo-text {
 .modal-content {
   width: 100%;
   max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
   animation: scaleUpModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
 }
@@ -2358,65 +1956,6 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   opacity: 1;
 }
 
-/* 3. NFC Pulse Wave Connector (between Phone & POS) */
-.nfc-pulse-wave-connector {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 90px;
-  height: 120px;
-  z-index: 5;
-}
-
-.nfc-pulse-wave {
-  position: relative;
-  width: 70px;
-  height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.nfc-pulse-wave.pulsing {
-  opacity: 1;
-}
-
-.nfc-pulse-wave .circle {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border: 3px solid var(--accent);
-  border-radius: 50%;
-  opacity: 0;
-  box-shadow: 0 0 12px var(--accent-glow);
-}
-
-.nfc-pulse-wave.pulsing .circle-1 {
-  animation: nfcRingWave 1.4s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
-}
-
-.nfc-pulse-wave.pulsing .circle-2 {
-  animation: nfcRingWave 1.4s cubic-bezier(0.1, 0.8, 0.3, 1) infinite 0.4s;
-}
-
-.nfc-pulse-wave.pulsing .circle-3 {
-  animation: nfcRingWave 1.4s cubic-bezier(0.1, 0.8, 0.3, 1) infinite 0.8s;
-}
-
-@keyframes nfcRingWave {
-  0% {
-    transform: scale(0.2);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1.6);
-    opacity: 0;
-  }
-}
-
 /* 4. Striped category progress animation */
 .category-progress-bar-fill {
   background-image: linear-gradient(
@@ -2808,8 +2347,7 @@ h1, h2, h3, h4, h5, h6, .logo-text {
 
   /* 8. Split page grids to single columns */
   .wallet-layout-grid,
-  .analytics-layout-grid,
-  .simulator-layout-grid {
+  .analytics-layout-grid {
     grid-template-columns: 1fr;
     gap: 20px;
   }
@@ -2825,29 +2363,6 @@ h1, h2, h3, h4, h5, h6, .logo-text {
 
   .analytics-table-grid {
     grid-template-columns: 1fr;
-  }
-
-  .simulator-workspace {
-    flex-direction: column;
-    padding: 20px 10px;
-    gap: 32px;
-  }
-
-  .nfc-pulse-wave-connector {
-    width: 100%;
-    height: 60px;
-  }
-
-  .nfc-pulse-wave {
-    transform: rotate(90deg); /* Rotate pulsing waves to vertical flow */
-  }
-
-  .wallet-connection-panel {
-    padding: 8px 4px;
-  }
-
-  .wallet-brand-logo-large h3 {
-    font-size: 18px;
   }
 
   /* 9. Wrap linked card management rows to prevent right-edge cropping */
