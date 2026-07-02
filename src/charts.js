@@ -88,73 +88,75 @@ export function renderTrendChart(transactions, range = 'month') {
   if (!ctx) return;
 
   const themeColors = getThemeColors();
-  
-  // Compile transaction timeline data
+
+  // Payments toward a credit card bill aren't a "purchase" over time, so
+  // they're excluded from the trend line (matches categoryTotals/cardTotals).
+  const purchaseTxs = transactions.filter(tx => tx.type !== 'payment');
+
   let labels = [];
   let dataPoints = [];
 
-  // Sort transactions by date ascending for charts
-  const sortedTxs = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  if (range === 'month') {
-    // Group transactions by day of current month (last 30 days)
+  if (range === 'week' || range === 'month') {
+    // Daily buckets over a rolling window
+    const days = range === 'week' ? 7 : 30;
     const dailySpend = {};
-    const today = new Date();
-    
-    // Pre-populate last 10 days to make line chart look continuous
-    for (let i = 9; i >= 0; i--) {
-      const d = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      dailySpend[dateStr] = 0;
+      dailySpend[d.toISOString().split('T')[0]] = 0;
     }
 
-    sortedTxs.forEach(tx => {
+    purchaseTxs.forEach(tx => {
       if (dailySpend[tx.date] !== undefined) {
         dailySpend[tx.date] += tx.amount;
-      } else {
-        // Only log if it is within range of the keys
-        const txDate = new Date(tx.date);
-        const diffTime = Math.abs(today - txDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays <= 30) {
-          dailySpend[tx.date] = tx.amount;
-        }
       }
     });
 
-    // Sort dates
     labels = Object.keys(dailySpend).map(dateStr => {
-      const [_, m, d] = dateStr.split('-');
+      const [, m, d] = dateStr.split('-');
       return `${m}/${d}`;
     });
     dataPoints = Object.values(dailySpend);
+  } else if (range === '3months' || range === '6months') {
+    // Weekly buckets over a rolling window
+    const weeks = range === '3months' ? 13 : 26;
+    labels = [];
+    dataPoints = [];
+
+    for (let w = weeks - 1; w >= 0; w--) {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - (w * 7 + 6));
+      const weekEnd = new Date(today);
+      weekEnd.setDate(today.getDate() - (w * 7));
+      weekEnd.setHours(23, 59, 59, 999);
+
+      const total = purchaseTxs.reduce((sum, tx) => {
+        const txDate = new Date(tx.date);
+        return (txDate >= weekStart && txDate <= weekEnd) ? sum + tx.amount : sum;
+      }, 0);
+
+      labels.push(`${weekStart.getMonth() + 1}/${weekStart.getDate()}`);
+      dataPoints.push(total);
+    }
   } else {
-    // Yearly View (Group by Month)
-    const monthlySpend = {
-      'Jan': 0, 'Feb': 0, 'Mar': 0, 'Apr': 0, 'May': 0, 'Jun': 0,
-      'Jul': 0, 'Aug': 0, 'Sep': 0, 'Oct': 0, 'Nov': 0, 'Dec': 0
-    };
+    // Yearly view: rolling last 12 calendar months
+    labels = [];
+    dataPoints = [];
 
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    // Add mock background spends for yearly chart to look pretty
-    monthlySpend['Jan'] = 850.00;
-    monthlySpend['Feb'] = 980.50;
-    monthlySpend['Mar'] = 1120.00;
-    monthlySpend['Apr'] = 910.20;
-    monthlySpend['May'] = 1340.00;
-    
-    sortedTxs.forEach(tx => {
-      const txDate = new Date(tx.date);
-      if (txDate.getFullYear() === 2026) {
-        const mName = monthNames[txDate.getMonth()];
-        monthlySpend[mName] = (monthlySpend[mName] || 0) + tx.amount;
-      }
-    });
+    for (let m = 11; m >= 0; m--) {
+      const monthDate = new Date(today.getFullYear(), today.getMonth() - m, 1);
+      const total = purchaseTxs.reduce((sum, tx) => {
+        const txDate = new Date(tx.date);
+        return (txDate.getFullYear() === monthDate.getFullYear() && txDate.getMonth() === monthDate.getMonth())
+          ? sum + tx.amount : sum;
+      }, 0);
 
-    labels = Object.keys(monthlySpend);
-    dataPoints = Object.values(monthlySpend);
+      labels.push(monthDate.toLocaleDateString('en-US', { month: 'short' }));
+      dataPoints.push(total);
+    }
   }
 
   // Draw chart
@@ -247,9 +249,10 @@ export function renderCardChart(cards, transactions) {
   const barColors = [];
 
   cards.forEach(card => {
-    // Calculate total spend in transaction list for this card
+    // Calculate total spend in transaction list for this card (excluding
+    // credit card payments -- those aren't a charge against the card)
     const cardSpent = transactions
-      .filter(tx => tx.cardId === card.id)
+      .filter(tx => tx.cardId === card.id && tx.type !== 'payment')
       .reduce((sum, tx) => sum + tx.amount, 0);
 
     cardNames.push(`${card.name} (...${card.last4})`);

@@ -1642,6 +1642,86 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   color: var(--danger);
 }
 
+/* IMPORT TRANSACTIONS MODAL */
+.import-status-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.import-pdf-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-dining);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  line-height: 1.4;
+}
+.import-pdf-warning i {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.import-preview-summary {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.import-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.import-preview-row {
+  display: grid;
+  grid-template-columns: 80px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.import-preview-date {
+  color: var(--text-muted);
+}
+
+.import-preview-merchant {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.import-preview-amount {
+  font-weight: 600;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.import-preview-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+}
+.import-preview-remove:hover {
+  color: var(--danger);
+}
+
 /* OAUTH SPECIFIC STYLES */
 .oauth-modal {
   max-width: 400px;

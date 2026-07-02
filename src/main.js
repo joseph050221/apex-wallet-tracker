@@ -16,9 +16,17 @@ import {
   authErrorMessage
 } from './auth.js';
 import { CATEGORIES, getCategoryColor, getCategoryLabel, hexToRgba } from './categories.js';
+import { parseImportFile } from './import.js';
 
 // Sentinel option value that triggers the "add a new category" prompt
 const ADD_NEW_CATEGORY_VALUE = '__add_new_category__';
+
+// Neutral color for the "Credit Card Payment" pseudo-category (excluded from
+// the regular category color system since it isn't a spending category)
+const PAYMENT_BADGE_COLOR = '#64748b';
+
+// Currently selected Spending Trend range, preserved across unrelated re-renders
+let currentTrendRange = 'month';
 
 // The currently signed-in Firebase user object (set by the auth listener)
 let currentAuthUser = null;
@@ -179,7 +187,7 @@ function initTabNavigation() {
 
       // Refresh layout-specific actions
       if (tab === 'analytics') {
-        renderAnalyticsTrend('month');
+        renderAnalyticsTrend(currentTrendRange);
       }
     });
   });
@@ -262,7 +270,7 @@ function renderAppUI() {
 
   // 6. DRAW CHARTS
   renderDonutChart(metrics);
-  renderTrendChart(txs, 'month');
+  renderTrendChart(txs, currentTrendRange);
   renderCardChart(cards, txs);
 
   // Update Lucide SVG icons in markup
@@ -387,12 +395,15 @@ function renderTransactionsLedger() {
     const txDate = new Date(tx.date);
     const formattedDate = txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-    // Category color (built-in categories keep their fixed color; custom
-    // categories get a deterministic color from the shared palette)
-    const catColor = getCategoryColor(tx.category);
+    // Credit card payments aren't a spending category, so they get a
+    // neutral color instead of the category color system
+    const isPayment = tx.type === 'payment';
+    const catColor = isPayment ? PAYMENT_BADGE_COLOR : getCategoryColor(tx.category);
+    const catLabel = isPayment ? 'Credit Card Payment' : getCategoryLabel(tx.category);
 
     // Icon based on how the transaction was logged
-    const sourceIcon = tx.source === 'Manual Input' ? 'edit-2' : 'nfc';
+    const sourceIconMap = { 'Manual Input': 'edit-2', 'Bank Import': 'upload', 'Payment Simulator': 'nfc' };
+    const sourceIcon = sourceIconMap[tx.source] || 'edit-2';
 
     tr.innerHTML = `
       <td>
@@ -408,7 +419,7 @@ function renderTransactionsLedger() {
         </div>
       </td>
       <td>
-        <span class="badge-category" style="background-color: ${hexToRgba(catColor, 0.1)}; color: ${catColor};">${getCategoryLabel(tx.category)}</span>
+        <span class="badge-category" style="background-color: ${hexToRgba(catColor, 0.1)}; color: ${catColor};">${catLabel}</span>
       </td>
       <td>
         <div class="card-used-badge">
@@ -536,6 +547,9 @@ function renderWalletTabDetails(cards) {
       </div>
 
       <div class="card-manage-actions">
+        <button class="btn-icon-edit btn-log-payment" data-id="${card.id}" title="Log a Payment">
+          <i data-lucide="banknote"></i>
+        </button>
         <button class="btn-icon-edit btn-edit-card" data-id="${card.id}" title="Edit Card">
           <i data-lucide="pencil"></i>
         </button>
@@ -544,6 +558,11 @@ function renderWalletTabDetails(cards) {
         </button>
       </div>
     `;
+
+    // Bind Log Payment button
+    item.querySelector('.btn-log-payment').addEventListener('click', () => {
+      openPaymentModal(card);
+    });
 
     // Bind Edit Card button
     item.querySelector('.btn-edit-card').addEventListener('click', () => {
@@ -560,6 +579,19 @@ function renderWalletTabDetails(cards) {
     });
 
     container.appendChild(item);
+  });
+}
+
+// Binds the Week/Month/3M/6M/Year buttons above the Spending Trend chart
+function bindTrendRangeButtons() {
+  const buttons = document.querySelectorAll('#trend-range-group .btn');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentTrendRange = btn.getAttribute('data-range');
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderAnalyticsTrend(currentTrendRange);
+    });
   });
 }
 
@@ -662,8 +694,7 @@ function populateCategorySelect(select, { includeAllOption = false, includeAddNe
 // EXPENSE MODAL: shared between "Add Expense" and "Edit Transaction"
 let editingTransactionId = null;
 
-function populateModalCardsDropdown() {
-  const selectCardForm = document.getElementById('form-card');
+function populateModalCardsDropdown(selectCardForm = document.getElementById('form-card')) {
   if (!selectCardForm) return;
   selectCardForm.innerHTML = '';
 
@@ -736,6 +767,168 @@ function openCardModal(card = null) {
   }
 
   document.getElementById('modal-add-card').classList.remove('hidden');
+}
+
+// IMPORT TRANSACTIONS MODAL
+let pendingImportRows = [];
+
+function renderImportPreview() {
+  const summary = document.getElementById('import-preview-summary');
+  const list = document.getElementById('import-preview-list');
+  const preview = document.getElementById('import-preview');
+  const confirmBtn = document.getElementById('btn-confirm-import');
+  const cardSelect = document.getElementById('import-card-select');
+
+  if (pendingImportRows.length === 0) {
+    preview.classList.add('hidden');
+    confirmBtn.disabled = true;
+    return;
+  }
+
+  preview.classList.remove('hidden');
+  const total = pendingImportRows.reduce((sum, r) => sum + r.amount, 0);
+  summary.textContent = `${pendingImportRows.length} transaction${pendingImportRows.length === 1 ? '' : 's'} found, totaling $${total.toFixed(2)}`;
+
+  list.innerHTML = pendingImportRows.map((row, index) => `
+    <div class="import-preview-row">
+      <span class="import-preview-date">${row.date}</span>
+      <span class="import-preview-merchant" title="${row.merchant}">${row.merchant}${row.category ? ` · ${getCategoryLabel(row.category)}` : ''}</span>
+      <span class="import-preview-amount">$${row.amount.toFixed(2)}</span>
+      <button type="button" class="import-preview-remove" data-index="${index}" title="Remove this row">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.import-preview-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingImportRows.splice(parseInt(btn.dataset.index, 10), 1);
+      renderImportPreview();
+      if (window.lucide) window.lucide.createIcons();
+    });
+  });
+
+  confirmBtn.disabled = pendingImportRows.length === 0 || !cardSelect.value;
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function initImportModal() {
+  const modal = document.getElementById('modal-import-transactions');
+  const btnOpen = document.getElementById('btn-open-import');
+  const btnClose = document.getElementById('btn-close-import-modal');
+  const btnCancel = document.getElementById('btn-cancel-import-modal');
+  const btnConfirm = document.getElementById('btn-confirm-import');
+  const fileInput = document.getElementById('import-file-input');
+  const cardSelect = document.getElementById('import-card-select');
+  const errorText = document.getElementById('import-error-text');
+  const statusText = document.getElementById('import-status-text');
+  const pdfWarning = document.getElementById('import-pdf-warning');
+
+  const closeModal = () => modal.classList.add('hidden');
+
+  const resetModal = () => {
+    pendingImportRows = [];
+    fileInput.value = '';
+    errorText.classList.add('hidden');
+    statusText.classList.add('hidden');
+    pdfWarning.classList.add('hidden');
+    document.getElementById('import-preview').classList.add('hidden');
+    btnConfirm.disabled = true;
+  };
+
+  btnOpen?.addEventListener('click', () => {
+    populateModalCardsDropdown(cardSelect);
+    resetModal();
+    modal.classList.remove('hidden');
+  });
+
+  btnClose.addEventListener('click', closeModal);
+  btnCancel.addEventListener('click', closeModal);
+
+  cardSelect.addEventListener('change', renderImportPreview);
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    pendingImportRows = [];
+    errorText.classList.add('hidden');
+    pdfWarning.classList.add('hidden');
+    document.getElementById('import-preview').classList.add('hidden');
+    statusText.classList.remove('hidden');
+    btnConfirm.disabled = true;
+
+    try {
+      const { transactions, error, bestEffort } = await parseImportFile(file);
+      statusText.classList.add('hidden');
+
+      if (error) {
+        errorText.textContent = error;
+        errorText.classList.remove('hidden');
+        return;
+      }
+
+      pendingImportRows = transactions;
+      if (bestEffort) pdfWarning.classList.remove('hidden');
+      renderImportPreview();
+    } catch (e) {
+      console.error('Import parsing failed', e);
+      statusText.classList.add('hidden');
+      errorText.textContent = 'Something went wrong reading that file.';
+      errorText.classList.remove('hidden');
+    }
+  });
+
+  btnConfirm.addEventListener('click', () => {
+    const cardId = cardSelect.value;
+    if (!cardId || pendingImportRows.length === 0) return;
+
+    const { count, totalAdded } = store.importTransactions(pendingImportRows, cardId);
+    toastManager.show('Import Complete', `Added ${count} transactions totaling $${totalAdded.toFixed(2)}.`, 'success');
+
+    closeModal();
+    resetModal();
+    renderAppUI();
+  });
+}
+
+// LOG CARD PAYMENT MODAL
+let paymentModalCardId = null;
+
+function openPaymentModal(card) {
+  paymentModalCardId = card.id;
+  document.getElementById('payment-card-name').textContent = card.name;
+  document.getElementById('form-log-payment').reset();
+  document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-log-payment').classList.remove('hidden');
+}
+
+function initPaymentModal() {
+  const modal = document.getElementById('modal-log-payment');
+  const btnClose = document.getElementById('btn-close-payment-modal');
+  const btnCancel = document.getElementById('btn-cancel-payment-modal');
+  const form = document.getElementById('form-log-payment');
+
+  const closeModal = () => modal.classList.add('hidden');
+  btnClose.addEventListener('click', closeModal);
+  btnCancel.addEventListener('click', closeModal);
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const amount = document.getElementById('payment-amount').value;
+    const date = document.getElementById('payment-date').value;
+    const note = document.getElementById('payment-note').value;
+
+    const tx = store.logCardPayment({ cardId: paymentModalCardId, amount, date, note });
+    if (tx) {
+      toastManager.show('Payment Logged', `Logged a $${parseFloat(amount).toFixed(2)} payment.`, 'success');
+    }
+
+    closeModal();
+    renderAppUI();
+  });
 }
 
 // AVATAR RENDERING: shows the user's real photo (Google sign-in) or a
@@ -1127,9 +1320,12 @@ document.addEventListener('DOMContentLoaded', () => {
         bindThemeToggleClick();
         initModals();
         initProfileModal();
+        initImportModal();
+        initPaymentModal();
         initLedgerFilters();
         bindSidebarToggle();
         bindLogoutButton();
+        bindTrendRangeButtons();
         appInitialized = true;
       }
 

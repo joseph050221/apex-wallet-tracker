@@ -253,6 +253,77 @@ class StateStore {
     return true;
   }
 
+  // Bulk-add transactions parsed from an imported bank statement (CSV/PDF).
+  // Does a single balance update and a single Firestore write instead of one
+  // per row, and skips smart-alert generation (would flood the user with
+  // toasts on a large import).
+  importTransactions(rows, cardId) {
+    const card = this.cards.find(c => c.id === cardId);
+    let totalAdded = 0;
+    let count = 0;
+    let needsUncategorized = false;
+
+    rows.forEach(row => {
+      const numericAmount = parseFloat(row.amount);
+      if (isNaN(numericAmount) || numericAmount <= 0) return;
+
+      if (!row.category) needsUncategorized = true;
+
+      this.transactions.unshift({
+        id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+        merchant: row.merchant || 'Imported Transaction',
+        amount: numericAmount,
+        category: row.category || 'Uncategorized',
+        cardId,
+        date: row.date || new Date().toISOString().split('T')[0],
+        source: 'Bank Import'
+      });
+
+      totalAdded += numericAmount;
+      count++;
+    });
+
+    // Register "Uncategorized" as a real custom category (if not already)
+    // so it shows up consistently in filters, budgets, and Analytics
+    if (needsUncategorized) {
+      const exists = [...CATEGORIES, ...this.customCategories]
+        .some(c => c.toLowerCase() === 'uncategorized');
+      if (!exists) this.customCategories.push('Uncategorized');
+    }
+
+    if (card) card.balance += totalAdded;
+
+    this.saveState();
+    return { count, totalAdded };
+  }
+
+  // Logs a payment made toward a credit card's bill. This is purely for
+  // total-spending visibility (it counts toward totalSpent so "how much did
+  // I spend this month" includes real cash that left your account) -- it
+  // intentionally does NOT reduce card.balance, since that field tracks
+  // purchase volume, not a real running balance. It's also excluded from
+  // per-category and per-card spend breakdowns, since it isn't a purchase.
+  logCardPayment({ cardId, amount, date, note }) {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) return null;
+
+    const card = this.cards.find(c => c.id === cardId);
+    const newTx = {
+      id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      merchant: (note || '').trim() || `Payment to ${card ? card.name : 'Card'}`,
+      amount: numericAmount,
+      category: 'Credit Card Payment',
+      cardId,
+      date: date || new Date().toISOString().split('T')[0],
+      source: 'Manual Input',
+      type: 'payment'
+    };
+
+    this.transactions.unshift(newTx);
+    this.saveState();
+    return newTx;
+  }
+
   // Delete a transaction
   deleteTransaction(txId) {
     const txIndex = this.transactions.findIndex(t => t.id === txId);
@@ -362,23 +433,27 @@ class StateStore {
     const prevMonthSpent = totalSpent * 0.92;
     const percentageDiff = prevMonthSpent > 0 ? ((totalSpent - prevMonthSpent) / prevMonthSpent) * 100 : 0;
 
-    // Spending breakdown by Category
+    // Spending breakdown by Category (excludes credit card payments -- those
+    // aren't a purchase category, they're a debt repayment)
     const categoryTotals = {};
     this.transactions.forEach(tx => {
+      if (tx.type === 'payment') return;
       categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
     });
 
-    // Spending breakdown by Card
+    // Spending breakdown by Card (same exclusion -- a payment isn't a charge)
     const cardTotals = {};
     this.transactions.forEach(tx => {
+      if (tx.type === 'payment') return;
       if (tx.cardId) {
         cardTotals[tx.cardId] = (cardTotals[tx.cardId] || 0) + tx.amount;
       }
     });
 
-    // Transactions logged in the current calendar month
+    // Purchases logged in the current calendar month (payments excluded)
     const now = new Date();
     const transactionsThisMonth = this.transactions.filter(tx => {
+      if (tx.type === 'payment') return false;
       const txDate = new Date(tx.date);
       return txDate.getFullYear() === now.getFullYear() && txDate.getMonth() === now.getMonth();
     }).length;

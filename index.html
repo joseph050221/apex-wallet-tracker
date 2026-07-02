@@ -140,6 +140,11 @@
           </div>
 
           <div class="header-actions">
+            <button class="btn btn-secondary" id="btn-open-import">
+              <i data-lucide="upload"></i>
+              <span>Import</span>
+            </button>
+
             <button class="btn btn-primary" id="btn-quick-add">
               <i data-lucide="plus"></i>
               <span>Add Expense</span>
@@ -299,9 +304,12 @@
               <div class="analytics-card glass-panel main-trend-card">
                 <div class="panel-header-with-action">
                   <h2>Spending Trend</h2>
-                  <div class="btn-group">
-                    <button class="btn btn-secondary btn-sm active" id="btn-trend-month">This Month</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-trend-year">Yearly View</button>
+                  <div class="btn-group" id="trend-range-group">
+                    <button class="btn btn-secondary btn-sm" data-range="week">Week</button>
+                    <button class="btn btn-secondary btn-sm active" data-range="month">Month</button>
+                    <button class="btn btn-secondary btn-sm" data-range="3months">3M</button>
+                    <button class="btn btn-secondary btn-sm" data-range="6months">6M</button>
+                    <button class="btn btn-secondary btn-sm" data-range="year">Year</button>
                   </div>
                 </div>
                 <div class="chart-container line-chart-wrapper">
@@ -380,6 +388,85 @@
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="btn-cancel-expense-modal">Cancel</button>
               <button type="submit" class="btn btn-primary" id="btn-save-expense">Save Expense</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- DIALOG MODAL: IMPORT BANK TRANSACTIONS -->
+      <div class="modal-backdrop hidden" id="modal-import-transactions">
+        <div class="modal-content glass-panel">
+          <div class="modal-header">
+            <h3>Import Bank Transactions</h3>
+            <button class="btn-close-modal" id="btn-close-import-modal">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+
+          <div class="modal-form">
+            <p class="panel-desc">Upload a CSV or PDF bank/credit-card statement. Everything is parsed right here in your browser — nothing is uploaded anywhere. We only import expenses (deposits/credits are skipped), and you can remove any row before confirming.</p>
+
+            <div class="form-group">
+              <label for="import-card-select">Which card is this statement for?</label>
+              <select id="import-card-select" required></select>
+            </div>
+
+            <div class="form-group">
+              <label for="import-file-input">Statement File (.csv or .pdf)</label>
+              <input type="file" id="import-file-input" accept=".csv,.pdf">
+            </div>
+
+            <p class="auth-error-text hidden" id="import-error-text"></p>
+            <p class="import-status-text hidden" id="import-status-text">Parsing file...</p>
+            <p class="import-pdf-warning hidden" id="import-pdf-warning">
+              <i data-lucide="alert-triangle"></i>
+              PDF parsing is best-effort — statement layouts vary a lot. Please review the rows below before importing.
+            </p>
+
+            <div class="import-preview hidden" id="import-preview">
+              <div class="import-preview-summary" id="import-preview-summary"></div>
+              <div class="import-preview-list" id="import-preview-list"></div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="btn-cancel-import-modal">Cancel</button>
+              <button type="button" class="btn btn-primary" id="btn-confirm-import" disabled>Import Transactions</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIALOG MODAL: LOG CREDIT CARD PAYMENT -->
+      <div class="modal-backdrop hidden" id="modal-log-payment">
+        <div class="modal-content glass-panel">
+          <div class="modal-header">
+            <h3>Log a Card Payment</h3>
+            <button class="btn-close-modal" id="btn-close-payment-modal">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+
+          <form class="modal-form" id="form-log-payment">
+            <p class="panel-desc">Record a payment you made toward <strong id="payment-card-name">this card</strong>'s bill. This won't change the card's tracked usage — it's just added to your total spending so your monthly numbers reflect real money that left your account.</p>
+
+            <div class="form-group">
+              <label for="payment-amount">Amount ($)</label>
+              <input type="number" step="0.01" min="0.01" id="payment-amount" required placeholder="0.00">
+            </div>
+
+            <div class="form-group">
+              <label for="payment-date">Payment Date</label>
+              <input type="date" id="payment-date" required>
+            </div>
+
+            <div class="form-group">
+              <label for="payment-note">Note (optional)</label>
+              <input type="text" id="payment-note" placeholder="e.g. Monthly statement payment">
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="btn-cancel-payment-modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Log Payment</button>
             </div>
           </form>
         </div>
