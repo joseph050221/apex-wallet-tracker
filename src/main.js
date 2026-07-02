@@ -427,11 +427,21 @@ function renderTransactionsLedger() {
       <td>${formattedDate}</td>
       <td class="text-right amount-value negative">-$${tx.amount.toFixed(2)}</td>
       <td class="text-center">
-        <button class="btn-icon-danger btn-delete-tx" data-id="${tx.id}" title="Remove Transaction">
-          <i data-lucide="trash-2"></i>
-        </button>
+        <div class="row-action-group">
+          <button class="btn-icon-edit btn-edit-tx" data-id="${tx.id}" title="Edit Transaction">
+            <i data-lucide="pencil"></i>
+          </button>
+          <button class="btn-icon-danger btn-delete-tx" data-id="${tx.id}" title="Remove Transaction">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
       </td>
     `;
+
+    // Bind Edit Event
+    tr.querySelector('.btn-edit-tx').addEventListener('click', () => {
+      openExpenseModal(tx);
+    });
 
     // Bind Delete Event
     tr.querySelector('.btn-delete-tx').addEventListener('click', () => {
@@ -528,11 +538,19 @@ function renderWalletTabDetails(cards) {
       </div>
 
       <div class="card-manage-actions">
+        <button class="btn-icon-edit btn-edit-card" data-id="${card.id}" title="Edit Card">
+          <i data-lucide="pencil"></i>
+        </button>
         <button class="btn-icon-danger btn-delete-card" data-id="${card.id}" title="Remove Card">
           <i data-lucide="trash-2"></i>
         </button>
       </div>
     `;
+
+    // Bind Edit Card button
+    item.querySelector('.btn-edit-card').addEventListener('click', () => {
+      openCardModal(card);
+    });
 
     // Bind Delete Card button
     item.querySelector('.btn-delete-card').addEventListener('click', () => {
@@ -612,6 +630,82 @@ function renderAnalyticsTrend(range = 'month') {
   }
 }
 
+// EXPENSE MODAL: shared between "Add Expense" and "Edit Transaction"
+let editingTransactionId = null;
+
+function populateModalCardsDropdown() {
+  const selectCardForm = document.getElementById('form-card');
+  if (!selectCardForm) return;
+  selectCardForm.innerHTML = '';
+
+  if (store.cards.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '-- No cards found --';
+    selectCardForm.appendChild(opt);
+    return;
+  }
+
+  store.cards.forEach(card => {
+    const opt = document.createElement('option');
+    opt.value = card.id;
+    opt.textContent = `${card.name} (...${card.last4})`;
+    selectCardForm.appendChild(opt);
+  });
+}
+
+// Opens the expense modal. Pass a transaction to edit it, or omit to add a new one.
+function openExpenseModal(tx = null) {
+  populateModalCardsDropdown();
+  editingTransactionId = tx ? tx.id : null;
+
+  const title = document.getElementById('expense-modal-title');
+  const saveBtn = document.getElementById('btn-save-expense');
+
+  if (tx) {
+    title.textContent = 'Edit Expense';
+    saveBtn.textContent = 'Save Changes';
+    document.getElementById('form-merchant').value = tx.merchant;
+    document.getElementById('form-amount').value = tx.amount;
+    document.getElementById('form-category').value = tx.category;
+    if (tx.cardId) document.getElementById('form-card').value = tx.cardId;
+    document.getElementById('form-date').value = tx.date;
+  } else {
+    title.textContent = 'Add Expense Manually';
+    saveBtn.textContent = 'Save Expense';
+    document.getElementById('form-add-expense').reset();
+    document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+  }
+
+  document.getElementById('modal-add-expense').classList.remove('hidden');
+}
+
+// CARD MODAL: shared between "Add New Payment Card" and "Edit Card"
+let editingCardId = null;
+
+// Opens the card modal. Pass a card to edit it, or omit to add a new one.
+function openCardModal(card = null) {
+  editingCardId = card ? card.id : null;
+
+  const title = document.getElementById('card-modal-title');
+  const saveBtn = document.getElementById('btn-save-card');
+
+  if (card) {
+    title.textContent = 'Edit Payment Card';
+    saveBtn.textContent = 'Save Changes';
+    document.getElementById('form-card-name').value = card.name;
+    document.getElementById('form-card-brand').value = card.brand;
+    document.getElementById('form-card-last4').value = card.last4;
+    document.getElementById('form-card-color').value = card.color;
+  } else {
+    title.textContent = 'Add New Payment Card';
+    saveBtn.textContent = 'Add Card';
+    document.getElementById('form-add-card').reset();
+  }
+
+  document.getElementById('modal-add-card').classList.remove('hidden');
+}
+
 // BIND MODAL DIALOGS ACTION EVENT LISTENERS
 function initModals() {
   const modalAddExpense = document.getElementById('modal-add-expense');
@@ -620,43 +714,14 @@ function initModals() {
   const btnCancelExpense = document.getElementById('btn-cancel-expense-modal');
   const formExpense = document.getElementById('form-add-expense');
 
-  // Card elements
-  const selectCardForm = document.getElementById('form-card');
-
-  // Load select input cards helper
-  function populateModalCardsDropdown() {
-    if (!selectCardForm) return;
-    selectCardForm.innerHTML = '';
-
-    if (store.cards.length === 0) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = '-- No cards found --';
-      selectCardForm.appendChild(opt);
-      return;
-    }
-
-    store.cards.forEach(card => {
-      const opt = document.createElement('option');
-      opt.value = card.id;
-      opt.textContent = `${card.name} (...${card.last4})`;
-      selectCardForm.appendChild(opt);
-    });
-  }
-
-  // Add Expense Dialog triggers
-  btnQuickAdd.addEventListener('click', () => {
-    populateModalCardsDropdown();
-    // Pre-populate today's date
-    document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
-    modalAddExpense.classList.remove('hidden');
-  });
+  // Add Expense Dialog trigger (always opens in "add" mode)
+  btnQuickAdd.addEventListener('click', () => openExpenseModal());
 
   const closeExpenseModal = () => modalAddExpense.classList.add('hidden');
   btnCloseExpense.addEventListener('click', closeExpenseModal);
   btnCancelExpense.addEventListener('click', closeExpenseModal);
 
-  // Submit Expense Form Handler
+  // Submit Expense Form Handler (add or edit, depending on editingTransactionId)
   formExpense.addEventListener('submit', (e) => {
     e.preventDefault();
 
@@ -671,39 +736,42 @@ function initModals() {
       return;
     }
 
-    const { transaction: newTx, alerts } = store.addTransaction({
-      merchant,
-      amount,
-      category,
-      cardId,
-      date,
-      source: 'Manual Input'
-    });
-
-    toastManager.show('Transaction Added', `Directly saved $${amount.toFixed(2)} spent at ${merchant}`, 'success');
-
-    // Check and trigger smart alerts
-    if (alerts && alerts.length > 0) {
-      alerts.forEach(alert => {
-        triggerSmartAlert(alert);
+    if (editingTransactionId) {
+      store.updateTransaction(editingTransactionId, { merchant, amount, category, cardId, date });
+      toastManager.show('Transaction Updated', `Saved changes to ${merchant}`, 'success');
+    } else {
+      const { alerts } = store.addTransaction({
+        merchant,
+        amount,
+        category,
+        cardId,
+        date,
+        source: 'Manual Input'
       });
+
+      toastManager.show('Transaction Added', `Directly saved $${amount.toFixed(2)} spent at ${merchant}`, 'success');
+
+      if (alerts && alerts.length > 0) {
+        alerts.forEach(alert => {
+          triggerSmartAlert(alert);
+        });
+      }
     }
 
     closeExpenseModal();
     formExpense.reset();
+    editingTransactionId = null;
     renderAppUI();
   });
 
-  // ADD NEW CARD POPUP MODAL
+  // ADD/EDIT CARD POPUP MODAL
   const modalAddCard = document.getElementById('modal-add-card');
   const btnAddCardOpen = document.getElementById('btn-add-card');
   const btnCloseCardModal = document.getElementById('btn-close-card-modal');
   const btnCancelCardModal = document.getElementById('btn-cancel-card-modal');
   const formCardAdd = document.getElementById('form-add-card');
 
-  btnAddCardOpen?.addEventListener('click', () => {
-    modalAddCard.classList.remove('hidden');
-  });
+  btnAddCardOpen?.addEventListener('click', () => openCardModal());
 
   const closeCardModal = () => modalAddCard.classList.add('hidden');
   btnCloseCardModal.addEventListener('click', closeCardModal);
@@ -717,17 +785,23 @@ function initModals() {
     const last4 = document.getElementById('form-card-last4').value;
     const color = document.getElementById('form-card-color').value;
 
-    store.addCard({
-      name,
-      brand,
-      last4,
-      color,
-      limit: 10000 // Default limit
-    });
+    if (editingCardId) {
+      store.updateCard(editingCardId, { name, brand, last4, color });
+      toastManager.show('Card Updated', `Saved changes to ${name}`, 'success');
+    } else {
+      store.addCard({
+        name,
+        brand,
+        last4,
+        color,
+        limit: 10000 // Default limit
+      });
+      toastManager.show('Card Added', `Added ${name} (...${last4}) to your account`, 'success');
+    }
 
-    toastManager.show('Card Added', `Added ${name} (...${last4}) to your account`, 'success');
     closeCardModal();
     formCardAdd.reset();
+    editingCardId = null;
     renderAppUI();
   });
 }

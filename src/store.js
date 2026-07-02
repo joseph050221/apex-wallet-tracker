@@ -216,6 +216,36 @@ class StateStore {
     return { transaction: newTx, alerts };
   }
 
+  // Edit an existing transaction's details
+  updateTransaction(txId, { merchant, amount, category, cardId, date }) {
+    const tx = this.transactions.find(t => t.id === txId);
+    if (!tx) return false;
+
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) return false;
+
+    // Revert the old amount from whichever card it was charged to
+    const oldCard = this.cards.find(c => c.id === tx.cardId);
+    if (oldCard) {
+      oldCard.balance = Math.max(0, oldCard.balance - tx.amount);
+    }
+
+    tx.merchant = merchant;
+    tx.amount = numericAmount;
+    tx.category = category;
+    tx.cardId = cardId;
+    tx.date = date || tx.date;
+
+    // Apply the new amount to whichever card it's now charged to
+    const newCard = this.cards.find(c => c.id === cardId);
+    if (newCard) {
+      newCard.balance += numericAmount;
+    }
+
+    this.saveState();
+    return true;
+  }
+
   // Delete a transaction
   deleteTransaction(txId) {
     const txIndex = this.transactions.findIndex(t => t.id === txId);
@@ -248,6 +278,20 @@ class StateStore {
     this.cards.push(newCard);
     this.saveState();
     return newCard;
+  }
+
+  // Edit an existing card's details
+  updateCard(cardId, { name, brand, last4, color }) {
+    const card = this.cards.find(c => c.id === cardId);
+    if (!card) return false;
+
+    card.name = name;
+    card.brand = brand.toLowerCase();
+    card.last4 = last4;
+    card.color = color || card.color;
+
+    this.saveState();
+    return true;
   }
 
   // Delete a card

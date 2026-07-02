@@ -1061,7 +1061,8 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   color: var(--text-primary);
 }
 
-.btn-icon-danger {
+.btn-icon-danger,
+.btn-icon-edit {
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -1074,9 +1075,20 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   color: var(--danger);
   background-color: rgba(239, 68, 68, 0.08);
 }
-.btn-icon-danger i {
+.btn-icon-edit:hover {
+  color: var(--primary);
+  background-color: var(--primary-glow);
+}
+.btn-icon-danger i,
+.btn-icon-edit i {
   width: 16px;
   height: 16px;
+}
+
+.row-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* TAB: MY CARDS LAYOUT */
