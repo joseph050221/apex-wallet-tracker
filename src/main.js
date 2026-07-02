@@ -1027,6 +1027,30 @@ function initPaymentModal() {
   });
 }
 
+// HELP & TUTORIAL MODAL
+function openHelpModal() {
+  document.getElementById('modal-help').classList.remove('hidden');
+}
+
+function initHelpModal() {
+  const modal = document.getElementById('modal-help');
+  const btnOpen = document.getElementById('btn-open-help');
+  const btnClose = document.getElementById('btn-close-help-modal');
+
+  btnOpen?.addEventListener('click', openHelpModal);
+  btnClose?.addEventListener('click', () => modal.classList.add('hidden'));
+}
+
+// Any open modal can be dismissed with Escape -- reuses each modal's own
+// close button so modal-specific reset logic (e.g. the import form) still runs.
+function bindGlobalEscapeKey() {
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const openModal = document.querySelector('.modal-backdrop:not(.hidden)');
+    openModal?.querySelector('.btn-close-modal')?.click();
+  });
+}
+
 // MONTHLY REPORT MODAL
 // Renders the exact same shared HTML template (src/reportHtml.js) that the
 // monthly email's PDF is generated from, into an iframe, so what you print
@@ -1512,11 +1536,13 @@ document.addEventListener('DOMContentLoaded', () => {
         initImportModal();
         initPaymentModal();
         initReportModal();
+        initHelpModal();
         initLedgerFilters();
         bindSidebarToggle();
         bindLogoutButton();
         bindTrendRangeButtons();
         bindScopeSwitcher();
+        bindGlobalEscapeKey();
         appInitialized = true;
       }
 
@@ -1526,6 +1552,11 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAppUI();
 
       showApp();
+
+      if (!store.settings.hasSeenTutorial) {
+        openHelpModal();
+        store.updateSettings({ hasSeenTutorial: true });
+      }
     } else {
       currentAuthUser = null;
       store.clearForLogout();

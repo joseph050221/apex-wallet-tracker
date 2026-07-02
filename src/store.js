@@ -25,7 +25,8 @@ const DEFAULT_SETTINGS = {
   theme: 'dark',
   sidebarCollapsed: false,
   notify: true,
-  monthlyReportEmailOptIn: false
+  monthlyReportEmailOptIn: false,
+  hasSeenTutorial: false
 };
 
 class StateStore {

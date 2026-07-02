@@ -122,6 +122,10 @@
               <span>Log Out</span>
             </button>
           </div>
+          <button class="nav-item" id="btn-open-help" title="Help & Tutorial">
+            <i data-lucide="help-circle"></i>
+            <span>Help</span>
+          </button>
           <button class="nav-item" id="btn-theme-toggle">
             <i data-lucide="sun" id="theme-icon-sun" class="hidden"></i>
             <i data-lucide="moon" id="theme-icon-moon"></i>
@@ -666,6 +670,67 @@
 
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" id="btn-signout-from-profile">Log Out</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIALOG MODAL: HELP & TUTORIAL -->
+      <div class="modal-backdrop hidden" id="modal-help">
+        <div class="modal-content modal-content-wide glass-panel">
+          <div class="modal-header">
+            <h3>Help &amp; Tutorial</h3>
+            <button class="btn-close-modal" id="btn-close-help-modal">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+
+          <div class="profile-modal-body">
+            <p class="panel-desc">A quick rundown of everything ApexWallet Tracker can do. Reopen this anytime from the Help button in the sidebar.</p>
+
+            <div class="profile-section">
+              <h4>Adding Your First Card</h4>
+              <p class="panel-desc">Go to <strong>My Cards</strong> → <strong>Add New Card</strong>. Give it a name, brand, last 4 digits, and optionally a credit limit to track usage with a progress bar. Click any card afterward to edit or delete it.</p>
+            </div>
+
+            <div class="profile-section">
+              <h4>Logging an Expense</h4>
+              <p class="panel-desc">Use the <strong>Add Expense</strong> button in the top bar to log a purchase manually. Every transaction appears in the ledger below, where you can edit or delete it anytime.</p>
+            </div>
+
+            <div class="profile-section">
+              <h4>Importing a Bank Statement</h4>
+              <p class="panel-desc">Click <strong>Import</strong>, choose which card the statement belongs to, then upload a .csv or .pdf file. Everything is parsed right in your browser by default — nothing is uploaded anywhere unless you turn on AI parsing (below).</p>
+            </div>
+
+            <div class="profile-section">
+              <h4>AI-Powered PDF Parsing (Optional)</h4>
+              <p class="panel-desc">If a PDF's layout trips up the built-in parser, add your own Anthropic API key in <strong>Profile &amp; Settings → AI-Powered PDF Import</strong> — get one at console.anthropic.com/settings/keys, billed a fraction of a cent per statement directly to your own account. Then click <strong>Try AI-Powered Parsing</strong> in the Import dialog.</p>
+            </div>
+
+            <div class="profile-section">
+              <h4>Logging a Card Payment</h4>
+              <p class="panel-desc">On any card in <strong>My Cards</strong>, click the payment icon to record a payment toward that card's bill. It counts toward your total spending for accuracy, but doesn't reduce the card's tracked usage.</p>
+            </div>
+
+            <div class="profile-section">
+              <h4>Personal / Business / All</h4>
+              <p class="panel-desc">The switcher at the top of the page filters the Dashboard, My Cards, Analytics, and the ledger by scope. Assign a card as Personal or Business when you add or edit it.</p>
+            </div>
+
+            <div class="profile-section">
+              <h4>Analytics &amp; Trends</h4>
+              <p class="panel-desc">The Spending Trend chart supports Week, Month, 3M, 6M, and Year ranges, alongside a Card Spending Distribution chart and a detailed category breakdown.</p>
+            </div>
+
+            <div class="profile-section">
+              <h4>Monthly Report</h4>
+              <p class="panel-desc">In Analytics, click <strong>Generate Monthly Report</strong> for a consolidated report across every card in view, with each transaction attributed to its card. Print or save it as a PDF, or opt into getting it emailed automatically each month from Profile &amp; Settings.</p>
+            </div>
+
+            <div class="profile-section">
+              <h4>Category Budgets &amp; Alerts</h4>
+              <p class="panel-desc">Set personal and business budgets per category in Profile &amp; Settings to trigger spending alerts, and enable desktop notifications there too.</p>
+            </div>
           </div>
         </div>
       </div>
