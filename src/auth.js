@@ -19,7 +19,7 @@ export async function signUp(email, password) {
     const actionCodeSettings = {
       // Redirects user back to this exact deployed app URL after verification
       url: window.location.origin + window.location.pathname,
-      handleCodeInApp: true
+      handleCodeInApp: false
     };
     await sendEmailVerification(credential.user, actionCodeSettings);
   }
@@ -34,7 +34,7 @@ export function resendVerificationEmail() {
   if (auth.currentUser) {
     const actionCodeSettings = {
       url: window.location.origin + window.location.pathname,
-      handleCodeInApp: true
+      handleCodeInApp: false
     };
     return sendEmailVerification(auth.currentUser, actionCodeSettings);
   }
