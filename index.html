@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons Script -->
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-CJfLM_6W.js"></script>
+    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-DbToQGqZ.js"></script>
     <link rel="stylesheet" crossorigin href="/apex-wallet-tracker/assets/index-fiXtqiVR.css">
   </head>
   <body class="dark-theme">
@@ -102,6 +102,16 @@
             <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
           </form>
           <p class="auth-switch-text">Already have an account? <a href="#" id="link-show-login">Log in</a></p>
+        </div>
+
+        <!-- Verification Pending Panel -->
+        <div id="auth-panel-verify" class="hidden">
+          <h3 style="margin-bottom: 12px; font-weight: 700; color: #fff;">Verify your email</h3>
+          <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
+            We sent a verification link to <strong id="verify-email-display" style="color: var(--accent);">your email</strong>. Please verify your account before accessing the app.
+          </p>
+          <button type="button" class="btn btn-primary btn-block" id="btn-resend-verification">Resend Verification Email</button>
+          <button type="button" class="btn btn-secondary btn-block" id="btn-cancel-verification" style="margin-top: 10px;">Back to Log In</button>
         </div>
 
         <div class="auth-divider"><span>or</span></div>
