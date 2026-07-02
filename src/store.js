@@ -27,9 +27,17 @@ class StateStore {
     this.cards = [];
     this.transactions = [];
     this.settings = { ...DEFAULT_SETTINGS };
-    this.categoryBudgets = DEFAULT_BUDGETS;
+    this.categoryBudgets = { ...DEFAULT_BUDGETS };
+    this.businessCategoryBudgets = { ...DEFAULT_BUDGETS };
     this.customCategories = [];
     this.listeners = [];
+  }
+
+  // Personal by default -- deleted/missing cards fall back to personal so
+  // nothing silently disappears from a scoped view.
+  getCardScope(cardId) {
+    const card = this.cards.find(c => c.id === cardId);
+    return (card && card.scope) || 'personal';
   }
 
   // Subscribe to state updates
@@ -51,6 +59,7 @@ class StateStore {
       transactions: this.transactions,
       settings: this.settings,
       categoryBudgets: this.categoryBudgets,
+      businessCategoryBudgets: this.businessCategoryBudgets,
       customCategories: this.customCategories
     };
   }
@@ -69,14 +78,16 @@ class StateStore {
         this.cards = data.cards || [];
         this.transactions = data.transactions || [];
         this.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
-        this.categoryBudgets = data.categoryBudgets || DEFAULT_BUDGETS;
+        this.categoryBudgets = data.categoryBudgets || { ...DEFAULT_BUDGETS };
+        this.businessCategoryBudgets = data.businessCategoryBudgets || { ...DEFAULT_BUDGETS };
         this.customCategories = data.customCategories || [];
       } else {
         // First-ever login for this account: start with a clean slate
         this.cards = [];
         this.transactions = [];
         this.settings = { ...DEFAULT_SETTINGS };
-        this.categoryBudgets = DEFAULT_BUDGETS;
+        this.categoryBudgets = { ...DEFAULT_BUDGETS };
+        this.businessCategoryBudgets = { ...DEFAULT_BUDGETS };
         this.customCategories = [];
         await setDoc(ref, this._snapshotState());
       }
@@ -85,7 +96,8 @@ class StateStore {
       this.cards = [];
       this.transactions = [];
       this.settings = { ...DEFAULT_SETTINGS };
-      this.categoryBudgets = DEFAULT_BUDGETS;
+      this.categoryBudgets = { ...DEFAULT_BUDGETS };
+      this.businessCategoryBudgets = { ...DEFAULT_BUDGETS };
       this.customCategories = [];
     }
 
@@ -100,7 +112,8 @@ class StateStore {
     this.cards = [];
     this.transactions = [];
     this.settings = { ...DEFAULT_SETTINGS };
-    this.categoryBudgets = DEFAULT_BUDGETS;
+    this.categoryBudgets = { ...DEFAULT_BUDGETS };
+    this.businessCategoryBudgets = { ...DEFAULT_BUDGETS };
     this.customCategories = [];
     this.notifyListeners();
   }
@@ -132,7 +145,11 @@ class StateStore {
     };
 
     const alerts = [];
-    const otherTxs = [...this.transactions];
+    const scope = this.getCardScope(cardId);
+    // Compare against same-scope history only -- a $500 business flight
+    // shouldn't get flagged as "unusual" against personal $50 averages, and
+    // vice versa.
+    const otherTxs = this.transactions.filter(t => this.getCardScope(t.cardId) === scope);
 
     this.transactions.unshift(newTx);
 
@@ -193,11 +210,13 @@ class StateStore {
       }
     }
 
-    // 4. Check Category Budget limits (crossing 80% or 100%)
+    // 4. Check Category Budget limits (crossing 80% or 100%) -- uses the
+    // budget set (personal vs business) matching this transaction's card
     const categorySpent = this.transactions
-      .filter(t => t.category === category)
+      .filter(t => t.category === category && this.getCardScope(t.cardId) === scope)
       .reduce((sum, t) => sum + t.amount, 0);
-    const budget = this.categoryBudgets[category] || 200;
+    const budgetSet = scope === 'business' ? this.businessCategoryBudgets : this.categoryBudgets;
+    const budget = budgetSet[category] || 200;
     const prevCategorySpent = categorySpent - numericAmount;
 
     const prevPct = (prevCategorySpent / budget) * 100;
@@ -342,7 +361,7 @@ class StateStore {
   }
 
   // Add a credit/debit card
-  addCard({ name, brand, last4, color, limit }) {
+  addCard({ name, brand, last4, color, limit, scope }) {
     const newCard = {
       id: `card-${Date.now()}`,
       name,
@@ -350,7 +369,8 @@ class StateStore {
       last4,
       color: color || 'card-theme-blue',
       limit: parseFloat(limit) || 0,
-      balance: 0.00
+      balance: 0.00,
+      scope: scope === 'business' ? 'business' : 'personal'
     };
 
     this.cards.push(newCard);
@@ -359,7 +379,7 @@ class StateStore {
   }
 
   // Edit an existing card's details
-  updateCard(cardId, { name, brand, last4, color, limit }) {
+  updateCard(cardId, { name, brand, last4, color, limit, scope }) {
     const card = this.cards.find(c => c.id === cardId);
     if (!card) return false;
 
@@ -369,6 +389,9 @@ class StateStore {
     card.color = color || card.color;
     if (limit !== undefined && limit !== '') {
       card.limit = parseFloat(limit) || 0;
+    }
+    if (scope !== undefined) {
+      card.scope = scope === 'business' ? 'business' : 'personal';
     }
 
     this.saveState();
@@ -403,6 +426,12 @@ class StateStore {
     this.saveState();
   }
 
+  // Same as above, but for business-scoped cards' spending
+  updateBusinessCategoryBudgets(newBudgets) {
+    this.businessCategoryBudgets = { ...this.businessCategoryBudgets, ...newBudgets };
+    this.saveState();
+  }
+
   // Add a user-defined category. Returns the canonical name (existing match if
   // already present, case-insensitively, among built-in or custom categories).
   addCustomCategory(name) {
@@ -424,10 +453,25 @@ class StateStore {
     await deleteDoc(doc(db, 'users', this.currentUid));
   }
 
-  // Get metrics and totals
-  getMetrics() {
-    const totalSpent = this.transactions.reduce((sum, tx) => sum + tx.amount, 0);
-    const activeCards = this.cards.length;
+  // Cards belonging to the given scope ('personal' | 'business' | 'all')
+  getCardsForScope(scope = 'all') {
+    if (scope === 'all') return this.cards;
+    return this.cards.filter(c => (c.scope || 'personal') === scope);
+  }
+
+  // Transactions whose card belongs to the given scope ('personal' | 'business' | 'all')
+  getTransactionsForScope(scope = 'all') {
+    if (scope === 'all') return this.transactions;
+    return this.transactions.filter(tx => this.getCardScope(tx.cardId) === scope);
+  }
+
+  // Get metrics and totals, optionally filtered to just Personal or Business cards
+  getMetrics(scope = 'all') {
+    const cards = this.getCardsForScope(scope);
+    const transactions = this.getTransactionsForScope(scope);
+
+    const totalSpent = transactions.reduce((sum, tx) => sum + tx.amount, 0);
+    const activeCards = cards.length;
 
     // Last Month Total Spend comparison (mocked to look realistic)
     const prevMonthSpent = totalSpent * 0.92;
@@ -436,14 +480,14 @@ class StateStore {
     // Spending breakdown by Category (excludes credit card payments -- those
     // aren't a purchase category, they're a debt repayment)
     const categoryTotals = {};
-    this.transactions.forEach(tx => {
+    transactions.forEach(tx => {
       if (tx.type === 'payment') return;
       categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
     });
 
     // Spending breakdown by Card (same exclusion -- a payment isn't a charge)
     const cardTotals = {};
-    this.transactions.forEach(tx => {
+    transactions.forEach(tx => {
       if (tx.type === 'payment') return;
       if (tx.cardId) {
         cardTotals[tx.cardId] = (cardTotals[tx.cardId] || 0) + tx.amount;
@@ -452,7 +496,7 @@ class StateStore {
 
     // Purchases logged in the current calendar month (payments excluded)
     const now = new Date();
-    const transactionsThisMonth = this.transactions.filter(tx => {
+    const transactionsThisMonth = transactions.filter(tx => {
       if (tx.type === 'payment') return false;
       const txDate = new Date(tx.date);
       return txDate.getFullYear() === now.getFullYear() && txDate.getMonth() === now.getMonth();

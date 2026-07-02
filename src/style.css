@@ -463,6 +463,20 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* GLOBAL PERSONAL / BUSINESS / ALL SCOPE SWITCHER */
+.scope-switcher-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.scope-switcher-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 /* STATS GRID */
 .stats-grid {
   display: grid;
@@ -722,6 +736,35 @@ h1, h2, h3, h4, h5, h6, .logo-text {
   justify-content: space-between;
   align-items: flex-start;
   z-index: 2;
+}
+
+.card-top-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.scope-badge.business {
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
+}
+
+.card-manage-title .scope-badge.business {
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--primary);
+  vertical-align: middle;
+  margin-left: 6px;
 }
 
 .card-issuer {

@@ -28,6 +28,10 @@ const PAYMENT_BADGE_COLOR = '#64748b';
 // Currently selected Spending Trend range, preserved across unrelated re-renders
 let currentTrendRange = 'month';
 
+// Currently selected Personal/Business/All scope, applied across Dashboard,
+// Analytics, My Cards, and the ledger. Persisted per-account in settings.
+let currentScope = 'all';
+
 // The currently signed-in Firebase user object (set by the auth listener)
 let currentAuthUser = null;
 
@@ -246,9 +250,9 @@ function bindThemeToggleClick() {
 
 // RENDERING: DYNAMIC WIDGETS AND LISTS
 function renderAppUI() {
-  const metrics = store.getMetrics();
-  const txs = store.transactions;
-  const cards = store.cards;
+  const metrics = store.getMetrics(currentScope);
+  const txs = store.getTransactionsForScope(currentScope);
+  const cards = store.getCardsForScope(currentScope);
 
   // 1. DASHBOARD STAT CARDS
   document.getElementById('stat-total-spent').textContent = `$${metrics.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -308,7 +312,10 @@ function renderDashboardCards(cards) {
 
     cardEl.innerHTML = `
       <div class="card-top">
-        <span class="card-issuer">${card.name.split(' ')[0]}</span>
+        <div class="card-top-left">
+          <span class="card-issuer">${card.name.split(' ')[0]}</span>
+          ${card.scope === 'business' ? '<span class="scope-badge business">Business</span>' : ''}
+        </div>
         <div class="card-chip"></div>
       </div>
       <div class="card-middle">
@@ -361,8 +368,8 @@ function renderTransactionsLedger() {
   const searchQuery = document.getElementById('input-search-transactions').value.toLowerCase();
   const categoryFilter = document.getElementById('select-filter-category').value;
 
-  // Filter transactions
-  let filtered = store.transactions.filter(tx => {
+  // Filter transactions (scoped to the current Personal/Business/All view)
+  let filtered = store.getTransactionsForScope(currentScope).filter(tx => {
     const matchesSearch = tx.merchant.toLowerCase().includes(searchQuery);
     const matchesCategory = categoryFilter === '' || tx.category === categoryFilter;
     return matchesSearch && matchesCategory;
@@ -534,7 +541,7 @@ function renderWalletTabDetails(cards) {
       </div>
 
       <div class="card-manage-info">
-        <span class="card-manage-title">${card.name}</span>
+        <span class="card-manage-title">${card.name}${card.scope === 'business' ? ' <span class="scope-badge business">Business</span>' : ''}</span>
         <div class="card-manage-meta">
           <span>Spent: <strong class="card-manage-spend">$${card.balance.toFixed(2)}</strong></span>
           ${card.limit > 0 ? `<span>Limit: $${card.limit.toLocaleString()} (${limitPct.toFixed(0)}%)</span>` : '<span>Limit: Uncapped</span>'}
@@ -582,6 +589,32 @@ function renderWalletTabDetails(cards) {
   });
 }
 
+// Binds the Personal/Business/All switcher (applies globally, not per-tab)
+function bindScopeSwitcher() {
+  const buttons = document.querySelectorAll('#scope-switcher .btn');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentScope = btn.getAttribute('data-scope');
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      store.updateSettings({ dashboardScope: currentScope });
+      renderAppUI();
+      if (document.getElementById('tab-analytics').classList.contains('active')) {
+        renderAnalyticsTrend(currentTrendRange);
+      }
+    });
+  });
+}
+
+// Syncs the switcher's active button + currentScope with the loaded account
+// settings (called once per login, since settings aren't known until then)
+function applyScopeFromSettings() {
+  currentScope = store.settings.dashboardScope || 'all';
+  document.querySelectorAll('#scope-switcher .btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-scope') === currentScope);
+  });
+}
+
 // Binds the Week/Month/3M/6M/Year buttons above the Spending Trend chart
 function bindTrendRangeButtons() {
   const buttons = document.querySelectorAll('#trend-range-group .btn');
@@ -597,17 +630,18 @@ function bindTrendRangeButtons() {
 
 // RENDERING ANALYTICS DETAIL CARDS
 function renderAnalyticsTrend(range = 'month') {
-  renderTrendChart(store.transactions, range);
+  const scopedTxs = store.getTransactionsForScope(currentScope);
+  renderTrendChart(scopedTxs, range);
 
   const container = document.getElementById('analytics-categories-detailed-grid');
   if (!container) return;
 
   container.innerHTML = '';
-  const metrics = store.getMetrics();
+  const metrics = store.getMetrics(currentScope);
 
   // Create mapping of category to transaction items count
   const categoryCounts = {};
-  store.transactions.forEach(tx => {
+  scopedTxs.forEach(tx => {
     categoryCounts[tx.category] = (categoryCounts[tx.category] || 0) + 1;
   });
 
@@ -758,12 +792,15 @@ function openCardModal(card = null) {
     document.getElementById('form-card-brand').value = card.brand;
     document.getElementById('form-card-last4').value = card.last4;
     document.getElementById('form-card-limit').value = card.limit;
+    document.getElementById('form-card-scope').value = card.scope || 'personal';
     document.getElementById('form-card-color').value = card.color;
   } else {
     title.textContent = 'Add New Payment Card';
     saveBtn.textContent = 'Add Card';
     document.getElementById('form-add-card').reset();
     document.getElementById('form-card-limit').value = 10000;
+    // Default to the currently active scope filter, if a specific one is selected
+    document.getElementById('form-card-scope').value = currentScope === 'business' ? 'business' : 'personal';
   }
 
   document.getElementById('modal-add-card').classList.remove('hidden');
@@ -956,14 +993,14 @@ function renderHeaderAvatar(user) {
 }
 
 // PROFILE & SETTINGS MODAL
-function populateBudgetsGrid() {
-  const container = document.getElementById('budgets-grid');
+function populateBudgetsGrid(containerId, budgets, inputPrefix) {
+  const container = document.getElementById(containerId);
   if (!container) return;
 
   container.innerHTML = [...CATEGORIES, ...store.customCategories].map(cat => `
     <div class="form-group">
-      <label for="budget-input-${cat}">${getCategoryLabel(cat)}</label>
-      <input type="number" min="0" step="1" id="budget-input-${cat}" value="${store.categoryBudgets[cat] || 0}">
+      <label for="${inputPrefix}-${cat}">${getCategoryLabel(cat)}</label>
+      <input type="number" min="0" step="1" id="${inputPrefix}-${cat}" value="${budgets[cat] || 0}">
     </div>
   `).join('');
 }
@@ -984,7 +1021,8 @@ function openProfileModal() {
     ? `Member since ${new Date(createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
     : '';
 
-  populateBudgetsGrid();
+  populateBudgetsGrid('budgets-grid', store.categoryBudgets, 'budget-input');
+  populateBudgetsGrid('business-budgets-grid', store.businessCategoryBudgets, 'business-budget-input');
   updateNotificationStatusUI();
 
   document.getElementById('modal-profile').classList.remove('hidden');
@@ -1028,7 +1066,17 @@ function initProfileModal() {
       newBudgets[cat] = parseFloat(input.value) || 0;
     });
     store.updateCategoryBudgets(newBudgets);
-    toastManager.show('Budgets Updated', 'Your monthly category budgets have been saved.', 'success');
+    toastManager.show('Budgets Updated', 'Your personal category budgets have been saved.', 'success');
+  });
+
+  document.getElementById('btn-save-business-budgets')?.addEventListener('click', () => {
+    const newBudgets = {};
+    [...CATEGORIES, ...store.customCategories].forEach(cat => {
+      const input = document.getElementById(`business-budget-input-${cat}`);
+      newBudgets[cat] = parseFloat(input.value) || 0;
+    });
+    store.updateBusinessCategoryBudgets(newBudgets);
+    toastManager.show('Budgets Updated', 'Your business category budgets have been saved.', 'success');
   });
 
   document.getElementById('btn-enable-notifications')?.addEventListener('click', () => {
@@ -1149,13 +1197,14 @@ function initModals() {
     const brand = document.getElementById('form-card-brand').value;
     const last4 = document.getElementById('form-card-last4').value;
     const limit = document.getElementById('form-card-limit').value;
+    const scope = document.getElementById('form-card-scope').value;
     const color = document.getElementById('form-card-color').value;
 
     if (editingCardId) {
-      store.updateCard(editingCardId, { name, brand, last4, color, limit });
+      store.updateCard(editingCardId, { name, brand, last4, color, limit, scope });
       toastManager.show('Card Updated', `Saved changes to ${name}`, 'success');
     } else {
-      store.addCard({ name, brand, last4, color, limit });
+      store.addCard({ name, brand, last4, color, limit, scope });
       toastManager.show('Card Added', `Added ${name} (...${last4}) to your account`, 'success');
     }
 
@@ -1326,11 +1375,13 @@ document.addEventListener('DOMContentLoaded', () => {
         bindSidebarToggle();
         bindLogoutButton();
         bindTrendRangeButtons();
+        bindScopeSwitcher();
         appInitialized = true;
       }
 
       applyThemeFromSettings();
       applySidebarCollapsedState();
+      applyScopeFromSettings();
       renderAppUI();
 
       showApp();
