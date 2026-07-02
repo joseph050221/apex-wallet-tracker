@@ -1559,8 +1559,7 @@ function bindAuthGateEvents() {
 
     signUp(email, password)
       .then(() => {
-        resetAuthForms();
-        showAuthError('login-error', 'Account created! A verification link has been sent to your email. Please check your inbox.');
+        document.getElementById('form-signup')?.reset();
       })
       .catch(err => showAuthError('signup-error', authErrorMessage(err)));
   });
