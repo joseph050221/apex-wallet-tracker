@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons Script -->
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-C7vd0tK4.js"></script>
+    <script type="module" crossorigin src="/apex-wallet-tracker/assets/index-Qh8GjAmw.js"></script>
     <link rel="stylesheet" crossorigin href="/apex-wallet-tracker/assets/index-fiXtqiVR.css">
   </head>
   <body class="dark-theme">
@@ -218,12 +218,12 @@
           <div class="header-actions">
             <button class="btn btn-secondary" id="btn-open-import">
               <i data-lucide="upload"></i>
-              <span>Import</span>
+              <span data-i18n="btn_import">Import</span>
             </button>
 
             <button class="btn btn-primary" id="btn-quick-add">
               <i data-lucide="plus"></i>
-              <span>Add Expense</span>
+              <span data-i18n="btn_add_expense">Add Expense</span>
             </button>
 
             <button class="user-profile" id="btn-open-profile" title="Profile & Settings">
@@ -253,7 +253,7 @@
             <div class="stats-grid">
               <div class="stat-card glass-panel">
                 <div class="stat-header">
-                  <span class="stat-label">Total Spends (Month)</span>
+                  <span class="stat-label" data-i18n="metric_spent">Total Spends (Month)</span>
                   <div class="stat-icon-wrapper color-purple">
                     <i data-lucide="dollar-sign"></i>
                   </div>
@@ -261,33 +261,33 @@
                 <div class="stat-value" id="stat-total-spent">$0.00</div>
                 <div class="stat-footer positive-trend">
                   <i data-lucide="arrow-up-right"></i>
-                  <span><span id="stat-percentage-change">0%</span> from last month</span>
+                  <span><span id="stat-percentage-change">0%</span> <span data-i18n="metric_trend">from last month</span></span>
                 </div>
               </div>
 
               <div class="stat-card glass-panel">
                 <div class="stat-header">
-                  <span class="stat-label">Active Cards</span>
+                  <span class="stat-label" data-i18n="metric_cards">Active Cards</span>
                   <div class="stat-icon-wrapper color-blue">
                     <i data-lucide="credit-card"></i>
                   </div>
                 </div>
                 <div class="stat-value" id="stat-active-cards">0</div>
                 <div class="stat-footer">
-                  <span>Across all linked cards</span>
+                  <span data-i18n="metric_cards_desc">Across all linked cards</span>
                 </div>
               </div>
 
               <div class="stat-card glass-panel">
                 <div class="stat-header">
-                  <span class="stat-label">Transactions This Month</span>
+                  <span class="stat-label" data-i18n="metric_txs">Transactions This Month</span>
                   <div class="stat-icon-wrapper color-green">
                     <i data-lucide="receipt"></i>
                   </div>
                 </div>
                 <div class="stat-value" id="stat-transactions-month">0</div>
                 <div class="stat-footer">
-                  <span>Logged purchases</span>
+                  <span data-i18n="metric_txs_desc">Logged purchases</span>
                 </div>
               </div>
             </div>
@@ -297,13 +297,13 @@
               <!-- Left: Doughnut Category breakdown & Card quick spent -->
               <div class="dashboard-col col-left glass-panel">
                 <div class="col-header">
-                  <h2>Spending Breakdown</h2>
-                  <span class="header-action-text" id="btn-view-analytics-shortcut">Full Reports</span>
+                  <h2 data-i18n="card_spending_breakdown">Spending Breakdown</h2>
+                  <span class="header-action-text" id="btn-view-analytics-shortcut" data-i18n="link_full_reports">Full Reports</span>
                 </div>
                 <div class="chart-container doughnut-wrapper">
                   <canvas id="chart-categories-donut"></canvas>
                   <div class="chart-center-info">
-                    <span class="center-label">Transactions</span>
+                    <span class="center-label" data-i18n="lbl_transactions">Transactions</span>
                     <span class="center-value" id="donut-total-count">0</span>
                   </div>
                 </div>
@@ -316,7 +316,7 @@
               <!-- Right: Card carousel/grid & Interactive connection status -->
               <div class="dashboard-col col-right glass-panel">
                 <div class="col-header">
-                  <h2>My Cards</h2>
+                  <h2 data-i18n="lbl_my_cards">My Cards</h2>
                 </div>
 
                 <!-- Horizontal list of customized premium cards -->
@@ -333,7 +333,7 @@
                 <div class="ledger-actions">
                   <div class="search-box">
                     <i data-lucide="search"></i>
-                    <input type="text" placeholder="Search merchants..." id="input-search-transactions">
+                    <input type="text" placeholder="Search merchants..." id="input-search-transactions" data-i18n="ledger_search_ph">
                   </div>
                   <select class="select-filter" id="select-filter-category">
                     <!-- Filled dynamically by JS -->
@@ -345,12 +345,12 @@
                 <table class="ledger-table" id="table-recent-transactions">
                   <thead>
                     <tr>
-                      <th>Merchant / Transaction</th>
-                      <th>Category</th>
-                      <th>Card Used</th>
-                      <th>Date</th>
-                      <th class="text-right">Amount</th>
-                      <th class="text-center">Actions</th>
+                      <th data-i18n="th_merchant">Merchant / Transaction</th>
+                      <th data-i18n="th_category">Category</th>
+                      <th data-i18n="th_card">Card Used</th>
+                      <th data-i18n="th_date">Date</th>
+                      <th class="text-right" data-i18n="th_amount">Amount</th>
+                      <th class="text-center" data-i18n="th_actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="transactions-tbody">
