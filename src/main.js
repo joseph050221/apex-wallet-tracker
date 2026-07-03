@@ -2038,6 +2038,27 @@ function initDevTab() {
     toastManager.show('Impersonation Exited', 'Returned to developer session dashboard.', 'info');
     renderAppUI();
   });
+
+  // 🧹 Wipe Database click listener
+  const btnPurge = document.getElementById('btn-purge-demo-data');
+  btnPurge?.addEventListener('click', async () => {
+    if (!confirm('🚨 WARNING: Are you sure you want to permanently delete all credit/debit cards and transactions from your account? This action cannot be undone.')) return;
+    
+    btnPurge.disabled = true;
+    const oldText = btnPurge.textContent;
+    btnPurge.textContent = '🧹 Wiping data...';
+
+    try {
+      await store.purgeAccountData();
+      toastManager.show('Database Cleared', 'All cards and transaction logs have been wiped from your account.', 'success');
+      renderAppUI();
+    } catch (err) {
+      toastManager.show('Wipe Failed', err.message || 'Could not wipe database.', 'warning');
+    } finally {
+      btnPurge.disabled = false;
+      btnPurge.textContent = oldText;
+    }
+  });
 }
 
 function updateDevConsoleUI() {

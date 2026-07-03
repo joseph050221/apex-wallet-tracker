@@ -1033,6 +1033,29 @@ class StateStore {
 
     this.notifyListeners();
   }
+
+  // Purge Account Data tool: Deletes all cards and transactions in Firestore under the active user's account.
+  async purgeAccountData() {
+    if (!this.currentUid) throw new Error("No user signed in to purge.");
+    if (this.inspectionMode) throw new Error("Wiping database is blocked in Inspection Mode.");
+
+    const batch = writeBatch(db);
+    this.writeCount++;
+
+    this.cards.forEach(card => {
+      batch.delete(doc(db, 'users', this.currentUid, 'cards', card.id));
+    });
+
+    this.transactions.forEach(tx => {
+      batch.delete(doc(db, 'users', this.currentUid, 'transactions', tx.id));
+    });
+
+    await batch.commit();
+
+    this.cards = [];
+    this.transactions = [];
+    this.notifyListeners();
+  }
 }
 
 export const store = new StateStore();
