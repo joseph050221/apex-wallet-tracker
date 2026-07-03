@@ -2,6 +2,29 @@
 import Chart from 'chart.js/auto';
 import { getCategoryColor } from './categories.js';
 import { parseLocalDate } from './dateUtils.js';
+import store from './store.js';
+import { translations } from './translations.js';
+
+function getTranslatedCategoryLabel(category) {
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+  
+  const mapping = {
+    'Dining': 'cat_dining',
+    'Shopping': 'cat_shopping',
+    'Transport': 'cat_transport',
+    'Entertainment': 'cat_entertainment',
+    'Bills': 'cat_bills',
+    'Groceries': 'cat_groceries',
+    'Travel': 'cat_travel'
+  };
+
+  const key = mapping[category];
+  if (key && dict[key]) {
+    return dict[key];
+  }
+  return category;
+}
 
 // Global references to Chart instances
 let donutChart = null;
@@ -25,9 +48,10 @@ export function renderDonutChart(metrics) {
   const ctx = document.getElementById('chart-categories-donut');
   if (!ctx) return;
 
-  const categories = Object.keys(metrics.categoryTotals);
+  const rawCategories = Object.keys(metrics.categoryTotals);
+  const categories = rawCategories.map(cat => getTranslatedCategoryLabel(cat));
   const dataValues = Object.values(metrics.categoryTotals);
-  const backgroundColors = categories.map(cat => getCategoryColor(cat));
+  const backgroundColors = rawCategories.map(cat => getCategoryColor(cat));
 
   const totalCount = metrics.totalSpent;
   document.getElementById('donut-total-count').textContent = `$${totalCount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

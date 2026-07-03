@@ -109,6 +109,28 @@ function translateUI() {
   }
 }
 
+// Localized category helper matching dictionary keys
+function getTranslatedCategoryLabel(category) {
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+  
+  const mapping = {
+    'Dining': 'cat_dining',
+    'Shopping': 'cat_shopping',
+    'Transport': 'cat_transport',
+    'Entertainment': 'cat_entertainment',
+    'Bills': 'cat_bills',
+    'Groceries': 'cat_groceries',
+    'Travel': 'cat_travel'
+  };
+
+  const key = mapping[category];
+  if (key && dict[key]) {
+    return dict[key];
+  }
+  return getCategoryLabel(category);
+}
+
 // Sentinel option value that triggers the "add a new category" prompt
 const ADD_NEW_CATEGORY_VALUE = '__add_new_category__';
 
@@ -284,9 +306,25 @@ function initTabNavigation() {
       panels.forEach(p => p.classList.remove('active'));
       document.getElementById(`tab-${tab}`).classList.add('active');
 
-      // Update Header Text
-      mainTitle.textContent = titles[tab];
-      mainSubtitle.textContent = subtitles[tab];
+      // Update Header Text dynamically using translations
+      const lang = store.settings.language || 'en';
+      const dict = translations[lang] || translations['en'];
+      const titleKeys = {
+        dashboard: 'nav_dashboard',
+        wallet: 'nav_cards',
+        analytics: 'nav_analytics',
+        qa: 'nav_qa',
+        dev: 'nav_dev'
+      };
+      const subtitleKeys = {
+        dashboard: 'sub_dashboard',
+        wallet: 'sub_cards',
+        analytics: 'sub_analytics',
+        qa: 'sub_qa',
+        dev: 'sub_dev'
+      };
+      mainTitle.textContent = dict[titleKeys[tab]] || titles[tab];
+      mainSubtitle.textContent = dict[subtitleKeys[tab]] || subtitles[tab];
 
       // Refresh layout-specific actions
       if (tab === 'analytics') {
@@ -407,10 +445,14 @@ function renderDashboardCards(cards) {
   container.innerHTML = '';
 
   if (cards.length === 0) {
+    const lang = store.settings.language || 'en';
+    const dict = translations[lang] || translations['en'];
+    const emptyTitle = dict.empty_cards_title || "No cards added yet.";
+    const emptySub = dict.empty_cards_subtitle || "Add a new credit card under My Cards.";
     container.innerHTML = `
       <div class="empty-cards-box" style="flex:1; border: 1px dashed var(--border-color); border-radius: 12px; padding: 32px; text-align:center; color: var(--text-secondary);">
-        <p>No cards added yet.</p>
-        <p style="font-size:12px; margin-top:4px;">Add a new credit card under My Cards.</p>
+        <p>${emptyTitle}</p>
+        <p style="font-size:12px; margin-top:4px;">${emptySub}</p>
       </div>
     `;
     return;
@@ -491,14 +533,18 @@ function renderTransactionsLedger() {
     return matchesSearch && matchesCategory;
   });
 
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
   tbody.innerHTML = '';
 
   if (filtered.length === 0) {
+    const emptyMsg = dict.ledger_empty || "No transactions match the filters.";
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
           <i data-lucide="inbox" style="width:24px; height:24px; margin-bottom:8px; display:inline-block;"></i>
-          <p>No transactions match the filters.</p>
+          <p>${escapeHtml(emptyMsg)}</p>
         </td>
       </tr>
     `;
@@ -522,11 +568,18 @@ function renderTransactionsLedger() {
     // neutral color instead of the category color system
     const isPayment = tx.type === 'payment';
     const catColor = isPayment ? PAYMENT_BADGE_COLOR : getCategoryColor(tx.category);
-    const catLabel = isPayment ? 'Credit Card Payment' : getCategoryLabel(tx.category);
+    const catLabel = isPayment ? (dict.credit_card_payment || 'Credit Card Payment') : getTranslatedCategoryLabel(tx.category);
 
     // Icon based on how the transaction was logged
     const sourceIconMap = { 'Manual Input': 'edit-2', 'Bank Import': 'upload', 'Payment Simulator': 'nfc' };
     const sourceIcon = sourceIconMap[tx.source] || 'edit-2';
+
+    const sourceKeyMap = {
+      'Manual Input': 'source_manual',
+      'Bank Import': 'source_import',
+      'Payment Simulator': 'source_simulator'
+    };
+    const translatedSource = dict[sourceKeyMap[tx.source]] || tx.source;
 
     tr.innerHTML = `
       <td>
@@ -536,7 +589,7 @@ function renderTransactionsLedger() {
             <span class="merchant-name">${escapeHtml(tx.merchant)}</span>
             <span class="tag-wallet-badge">
               <i data-lucide="${sourceIcon}"></i>
-              <span>${escapeHtml(tx.source)}</span>
+              <span>${escapeHtml(translatedSource)}</span>
             </span>
           </div>
         </div>
@@ -598,8 +651,12 @@ function renderCategoryProgressList(metrics) {
   // Sort categories by volume spent
   const sortedCats = Object.entries(totals).sort((a,b) => b[1] - a[1]);
 
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
   if (sortedCats.length === 0) {
-    container.innerHTML = `<p style="font-size:13px; text-align:center; color:var(--text-muted); padding: 10px 0;">No categorical spends logged yet.</p>`;
+    const emptyMsg = dict.empty_breakdown || "No categorical spends logged yet.";
+    container.innerHTML = `<p style="font-size:13px; text-align:center; color:var(--text-muted); padding: 10px 0;">${escapeHtml(emptyMsg)}</p>`;
     return;
   }
 
@@ -613,7 +670,7 @@ function renderCategoryProgressList(metrics) {
       <div class="category-item-meta">
         <span class="category-item-name">
           <span class="category-dot" style="background-color: ${catColor};"></span>
-          <span>${escapeHtml(getCategoryLabel(catName))}</span>
+          <span>${escapeHtml(getTranslatedCategoryLabel(catName))}</span>
           <span class="category-item-pct">${pct}%</span>
         </span>
         <span class="category-item-amount">$${amount.toFixed(2)}</span>
@@ -815,24 +872,29 @@ function populateCategorySelect(select, { includeAllOption = false, includeAddNe
   const previousValue = select.value;
   select.innerHTML = '';
 
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
   if (includeAllOption) {
     const opt = document.createElement('option');
     opt.value = '';
-    opt.textContent = 'All Categories';
+    const allLabel = lang === 'zh' ? '所有类别' : (lang === 'fr' ? 'Toutes catégories' : 'All Categories');
+    opt.textContent = allLabel;
     select.appendChild(opt);
   }
 
   [...CATEGORIES, ...store.customCategories].forEach(cat => {
     const opt = document.createElement('option');
     opt.value = cat;
-    opt.textContent = getCategoryLabel(cat);
+    opt.textContent = getTranslatedCategoryLabel(cat);
     select.appendChild(opt);
   });
 
   if (includeAddNew) {
     const opt = document.createElement('option');
     opt.value = ADD_NEW_CATEGORY_VALUE;
-    opt.textContent = '+ Add New Category';
+    const addNewLabel = lang === 'zh' ? '+ 添加新类别' : (lang === 'fr' ? '+ Ajouter une catégorie' : '+ Add New Category');
+    opt.textContent = addNewLabel;
     select.appendChild(opt);
   }
 
