@@ -14,7 +14,7 @@ import { doc, setDoc } from 'firebase/firestore';
 
 const googleProvider = new GoogleAuthProvider();
 
-export async function signUp(email, password, fullName = '') {
+export async function signUp(email, password, fullName = '', language = 'en') {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   if (credential.user) {
     const actionCodeSettings = {
@@ -35,7 +35,8 @@ export async function signUp(email, password, fullName = '') {
         monthlyReportEmailOptIn: false,
         hasSeenTutorial: false,
         welcomeEmailSent: false,
-        fullName: fullName
+        fullName: fullName,
+        language: language
       },
       categoryBudgets: {
         Groceries: 300,

@@ -35,12 +35,21 @@
 
     <!-- Auth Gate: Login / Signup screen shown when logged out -->
     <div class="auth-gate hidden" id="auth-gate">
+      <!-- Outer Language Selector -->
+      <div style="position: absolute; top: 16px; right: 16px; z-index: 100;">
+        <select id="auth-language-select" style="background: rgba(0,0,0,0.6); border: 1px solid var(--border-color); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; font-family: 'Outfit', sans-serif;">
+          <option value="en">English 🇬🇧</option>
+          <option value="fr">Français 🇫🇷</option>
+          <option value="zh">中文 🇨🇳</option>
+        </select>
+      </div>
+
       <div class="auth-gate-card glass-panel">
         <div class="auth-gate-header">
           <div class="logo-icon">
             <i data-lucide="wallet" class="neon-glow-icon"></i>
           </div>
-          <h2>Welcome to ApexWallet</h2>
+          <h2 data-i18n="welcome_title">Welcome to ApexWallet</h2>
           <p class="panel-desc">Log in to keep your cards and transactions private to your account.</p>
         </div>
 
@@ -156,23 +165,23 @@
         <nav class="sidebar-nav">
           <button class="nav-item active" data-tab="dashboard" id="btn-nav-dashboard">
             <i data-lucide="layout-dashboard"></i>
-            <span>Dashboard</span>
+            <span data-i18n="nav_dashboard">Dashboard</span>
           </button>
           <button class="nav-item" data-tab="wallet" id="btn-nav-wallet">
             <i data-lucide="credit-card"></i>
-            <span>My Cards</span>
+            <span data-i18n="nav_cards">My Cards</span>
           </button>
           <button class="nav-item" data-tab="analytics" id="btn-nav-analytics">
             <i data-lucide="trending-up"></i>
-            <span>Analytics</span>
+            <span data-i18n="nav_analytics">Analytics</span>
           </button>
           <button class="nav-item" data-tab="qa" id="btn-nav-qa">
             <i data-lucide="message-square"></i>
-            <span>AI Assistant</span>
+            <span data-i18n="nav_qa">AI Assistant</span>
           </button>
           <button class="nav-item" data-tab="dev" id="btn-nav-dev">
             <i data-lucide="terminal"></i>
-            <span>Dev Console</span>
+            <span data-i18n="nav_dev">Dev Console</span>
           </button>
         </nav>
 
@@ -181,17 +190,17 @@
             <span class="sidebar-user-email" id="sidebar-user-email"></span>
             <button class="nav-item" id="btn-logout" title="Log out">
               <i data-lucide="log-out"></i>
-              <span>Log Out</span>
+              <span data-i18n="nav_logout">Log Out</span>
             </button>
           </div>
           <button class="nav-item" id="btn-open-help" title="Help & Tutorial">
             <i data-lucide="help-circle"></i>
-            <span>Help</span>
+            <span data-i18n="nav_help">Help</span>
           </button>
           <button class="nav-item" id="btn-theme-toggle">
             <i data-lucide="sun" id="theme-icon-sun" class="hidden"></i>
             <i data-lucide="moon" id="theme-icon-moon"></i>
-            <span id="theme-text">Dark Mode</span>
+            <span id="theme-text" data-i18n="nav_theme_dark">Dark Mode</span>
           </button>
         </div>
       </aside>
@@ -201,8 +210,8 @@
         <!-- Top bar/header -->
         <header class="top-bar">
           <div class="header-title">
-            <h1 class="page-title" id="page-title-main">Dashboard</h1>
-            <p class="subtitle" id="page-subtitle-main">Overview of your transactions</p>
+            <h1 class="page-title" id="page-title-main" data-i18n="nav_dashboard">Dashboard</h1>
+            <p class="subtitle" id="page-subtitle-main" data-i18n="sub_dashboard">Overview of your transactions</p>
           </div>
 
           <div class="header-actions">
@@ -228,11 +237,11 @@
 
           <!-- Global Personal / Business / All filter -- applies to Dashboard, Analytics, My Cards, and the ledger -->
           <div class="scope-switcher-bar">
-            <span class="scope-switcher-label">Viewing:</span>
+            <span class="scope-switcher-label" data-i18n="switcher_lbl">Viewing:</span>
             <div class="btn-group" id="scope-switcher">
-              <button class="btn btn-secondary btn-sm" data-scope="personal">Personal</button>
-              <button class="btn btn-secondary btn-sm" data-scope="business">Business</button>
-              <button class="btn btn-secondary btn-sm active" data-scope="all">All</button>
+              <button class="btn btn-secondary btn-sm" data-scope="personal" data-i18n="switcher_personal">Personal</button>
+              <button class="btn btn-secondary btn-sm" data-scope="business" data-i18n="switcher_business">Business</button>
+              <button class="btn btn-secondary btn-sm active" data-scope="all" data-i18n="switcher_all">All</button>
             </div>
           </div>
 
@@ -319,7 +328,7 @@
             <!-- Third Row: Recent Transactions Ledger -->
             <div class="dashboard-ledger glass-panel">
               <div class="ledger-header">
-                <h2>Recent Purchases</h2>
+                <h2 data-i18n="ledger_title">Recent Purchases</h2>
                 <div class="ledger-actions">
                   <div class="search-box">
                     <i data-lucide="search"></i>
@@ -788,11 +797,23 @@
             </div>
 
             <div class="profile-section">
-              <h4>Display Name</h4>
-              <p class="panel-desc">Customize your username for headings and notifications.</p>
+              <h4 data-i18n="profile_name_lbl">Display Name</h4>
+              <p class="panel-desc" data-i18n="profile_name_desc">Customize your username for headings and notifications.</p>
               <div class="form-group" style="display: flex; gap: 10px; margin-top: 8px;">
                 <input type="text" id="profile-name-input" placeholder="Your name" style="flex-grow: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: #fff;">
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-save-profile-name" style="margin-top: 0;">Save Name</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-save-profile-name" style="margin-top: 0;" data-i18n="profile_btn_save">Save Name</button>
+              </div>
+            </div>
+
+            <div class="profile-section">
+              <h4 data-i18n="profile_lang_lbl">Language Select</h4>
+              <p class="panel-desc">Choose your preferred language for the interface.</p>
+              <div class="form-group" style="margin-top: 8px;">
+                <select id="profile-language-select" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: #fff; cursor: pointer; font-family: 'Outfit', sans-serif;">
+                  <option value="en">English 🇬🇧</option>
+                  <option value="fr">Français 🇫🇷</option>
+                  <option value="zh">中文 🇨🇳</option>
+                </select>
               </div>
             </div>
 

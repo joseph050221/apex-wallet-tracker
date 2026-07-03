@@ -28,7 +28,8 @@ const DEFAULT_SETTINGS = {
   monthlyReportEmailOptIn: false,
   hasSeenTutorial: false,
   welcomeEmailSent: false,
-  fullName: ''
+  fullName: '',
+  language: 'en'
 };
 
 const DEVELOPER_EMAILS = [

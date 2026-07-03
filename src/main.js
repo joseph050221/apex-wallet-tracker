@@ -18,6 +18,7 @@ import {
   verifyEmailCode
 } from './auth.js';
 import { CATEGORIES, getCategoryColor, getCategoryLabel, hexToRgba } from './categories.js';
+import { translations } from './translations.js';
 import { parseImportFile } from './import.js';
 import { parsePdfTransactionsWithAI } from './aiImport.js';
 import { getAiApiKey, setAiApiKey } from './aiKey.js';
@@ -30,6 +31,82 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
+}
+
+// Client-side translation system for English, French, and Mandarin (zh-CN)
+function translateUI() {
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
+  // 1. Translate all static elements with [data-i18n]
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key]) {
+      el.textContent = dict[key];
+    }
+  });
+
+  // 2. Translate all inputs with placeholders
+  document.querySelectorAll('input[placeholder]').forEach(el => {
+    const placeholderKeys = {
+      'login-email': 'auth_email_ph',
+      'login-password': 'auth_pwd_ph',
+      'signup-name': 'auth_name_ph',
+      'signup-email': 'auth_email_ph',
+      'signup-password': 'auth_pwd_ph',
+      'signup-password-confirm': 'auth_pwd_ph',
+      'profile-name-input': 'auth_name_ph'
+    };
+    const transKey = placeholderKeys[el.id];
+    if (transKey && dict[transKey]) {
+      el.setAttribute('placeholder', dict[transKey]);
+    }
+  });
+
+  // 3. Update select values to match state
+  const authLangSelect = document.getElementById('auth-language-select');
+  if (authLangSelect) authLangSelect.value = lang;
+
+  const profileLangSelect = document.getElementById('profile-language-select');
+  if (profileLangSelect) profileLangSelect.value = lang;
+
+  // 4. Update dynamic top bar header/subtitle depending on current active tab
+  const activeTabBtn = document.querySelector('.nav-item.active[data-tab]');
+  if (activeTabBtn) {
+    const tab = activeTabBtn.getAttribute('data-tab');
+    const mainTitle = document.getElementById('page-title-main');
+    const mainSubtitle = document.getElementById('page-subtitle-main');
+
+    const titleKeys = {
+      dashboard: 'nav_dashboard',
+      wallet: 'nav_cards',
+      analytics: 'nav_analytics',
+      qa: 'nav_qa',
+      dev: 'nav_dev'
+    };
+
+    const subtitleKeys = {
+      dashboard: 'sub_dashboard',
+      wallet: 'sub_cards',
+      analytics: 'sub_analytics',
+      qa: 'sub_qa',
+      dev: 'sub_dev'
+    };
+
+    if (mainTitle && titleKeys[tab] && dict[titleKeys[tab]]) {
+      mainTitle.textContent = dict[titleKeys[tab]];
+    }
+    if (mainSubtitle && subtitleKeys[tab] && dict[subtitleKeys[tab]]) {
+      mainSubtitle.textContent = dict[subtitleKeys[tab]];
+    }
+  }
+
+  // 5. Update welcome greeting
+  const greetingEl = document.getElementById('dashboard-welcome-greeting');
+  if (greetingEl) {
+    const welcomeWord = lang === 'zh' ? '欢迎' : (lang === 'fr' ? 'Bienvenue' : 'Welcome');
+    greetingEl.textContent = `${welcomeWord}, ${store.settings.fullName || 'User'}!`;
+  }
 }
 
 // Sentinel option value that triggers the "add a new category" prompt
@@ -274,15 +351,11 @@ function bindThemeToggleClick() {
 
 // RENDERING: DYNAMIC WIDGETS AND LISTS
 function renderAppUI() {
+  translateUI();
+
   const metrics = store.getMetrics(currentScope);
   const txs = store.getTransactionsForScope(currentScope);
   const cards = store.getCardsForScope(currentScope);
-
-  // Set welcome greeting with user's name
-  const greetingEl = document.getElementById('dashboard-welcome-greeting');
-  if (greetingEl) {
-    greetingEl.textContent = `Welcome, ${store.settings.fullName || 'User'}!`;
-  }
 
   // 1. DASHBOARD STAT CARDS
   document.getElementById('stat-total-spent').textContent = `$${metrics.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1273,6 +1346,22 @@ function initProfileModal() {
     }
   });
 
+  // Save Language change listener
+  document.getElementById('profile-language-select')?.addEventListener('change', async (e) => {
+    const newLang = e.target.value;
+    try {
+      await store.updateSettings({ language: newLang });
+      toastManager.show(
+        newLang === 'zh' ? '语言已更新' : (newLang === 'fr' ? 'Langue mise à jour' : 'Language Updated'),
+        newLang === 'zh' ? '界面已成功切换为中文。' : (newLang === 'fr' ? 'La langue a été changée en Français.' : 'Language has been changed to English.'),
+        'success'
+      );
+      renderAppUI();
+    } catch (err) {
+      toastManager.show('Error', 'Could not update language settings.', 'warning');
+    }
+  });
+
   document.getElementById('btn-save-budgets')?.addEventListener('click', () => {
     const newBudgets = {};
     [...CATEGORIES, ...store.customCategories].forEach(cat => {
@@ -1529,6 +1618,13 @@ function bindAuthGateEvents() {
   const formLogin = document.getElementById('form-login');
   const formSignup = document.getElementById('form-signup');
 
+  // Outer Language selector binding
+  const authLangSelect = document.getElementById('auth-language-select');
+  authLangSelect?.addEventListener('change', (e) => {
+    store.settings.language = e.target.value;
+    translateUI();
+  });
+
   document.getElementById('link-show-signup')?.addEventListener('click', (e) => {
     e.preventDefault();
     hideAuthErrors();
@@ -1611,7 +1707,8 @@ function bindAuthGateEvents() {
       return;
     }
 
-    signUp(email, password, name)
+    const lang = document.getElementById('auth-language-select')?.value || 'en';
+    signUp(email, password, name, lang)
       .then(async () => {
         document.getElementById('form-signup')?.reset();
         await signOutUser();
