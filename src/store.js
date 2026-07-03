@@ -52,6 +52,14 @@ class StateStore {
     this.readCount = 0;
     this.writeCount = 0;
     this.simulatedLatency = false;
+
+    // Developer Impersonation (Inspection) Mode parameters
+    this.inspectionMode = false;
+    this.inspectedUid = null;
+    this.inspectedEmail = '';
+    this._backupCards = [];
+    this._backupTransactions = [];
+    this._backupSettings = {};
   }
 
   get isDeveloper() {
@@ -88,6 +96,7 @@ class StateStore {
   }
 
   _saveCardDoc(card) {
+    if (this.inspectionMode) return;
     if (this.currentUid) {
       this.writeCount++;
       const run = () => setDoc(doc(db, 'users', this.currentUid, 'cards', card.id), card).catch(e => {
@@ -99,6 +108,7 @@ class StateStore {
   }
 
   _saveTransactionDoc(tx) {
+    if (this.inspectionMode) return;
     if (this.currentUid) {
       this.writeCount++;
       const run = () => setDoc(doc(db, 'users', this.currentUid, 'transactions', tx.id), tx).catch(e => {
@@ -110,6 +120,7 @@ class StateStore {
   }
 
   _deleteCardDoc(cardId) {
+    if (this.inspectionMode) return;
     if (this.currentUid) {
       this.writeCount++;
       const run = () => deleteDoc(doc(db, 'users', this.currentUid, 'cards', cardId)).catch(e => {
@@ -121,6 +132,7 @@ class StateStore {
   }
 
   _deleteTransactionDoc(txId) {
+    if (this.inspectionMode) return;
     if (this.currentUid) {
       this.writeCount++;
       const run = () => deleteDoc(doc(db, 'users', this.currentUid, 'transactions', txId)).catch(e => {
@@ -266,6 +278,10 @@ class StateStore {
 
   // Persist current state to Firestore (fire-and-forget) and notify listeners
   saveState() {
+    if (this.inspectionMode) {
+      this.notifyListeners();
+      return;
+    }
     if (this.currentUid) {
       this.writeCount++;
       const ref = doc(db, 'users', this.currentUid);
@@ -771,6 +787,251 @@ class StateStore {
       console.error('Error fetching all users from Firestore:', err);
       throw err;
     }
+  }
+
+  // Seeding tool: Generates 3 mock cards and 12 mock transactions.
+  async seedDemoData() {
+    if (!this.currentUid) throw new Error("No user signed in to seed.");
+
+    const cardId1 = `card-demo-chase-${Date.now()}`;
+    const cardId2 = `card-demo-amex-${Date.now()}`;
+    const cardId3 = `card-demo-apple-${Date.now()}`;
+
+    const demoCards = [
+      {
+        id: cardId1,
+        name: 'Chase Sapphire Preferred',
+        brand: 'visa',
+        last4: '4382',
+        color: 'sapphire',
+        limit: 15000,
+        balance: 368.75,
+        scope: 'personal'
+      },
+      {
+        id: cardId2,
+        name: 'American Express Gold',
+        brand: 'amex',
+        last4: '1007',
+        color: 'gold',
+        limit: 25000,
+        balance: 280.49,
+        scope: 'personal'
+      },
+      {
+        id: cardId3,
+        name: 'Apple Cash Business',
+        brand: 'mastercard',
+        last4: '8821',
+        color: 'dark',
+        limit: 10000,
+        balance: 914.80,
+        scope: 'business'
+      }
+    ];
+
+    const now = new Date();
+    const formatDate = (daysAgo) => {
+      const d = new Date(now);
+      d.setDate(d.getDate() - daysAgo);
+      return d.toISOString().split('T')[0];
+    };
+
+    const demoTxs = [
+      {
+        id: `tx-demo-1-${Date.now()}`,
+        merchant: 'Whole Foods Market',
+        amount: 142.80,
+        category: 'Groceries',
+        cardId: cardId1,
+        date: formatDate(1),
+        source: 'Manual Input'
+      },
+      {
+        id: `tx-demo-2-${Date.now()}`,
+        merchant: 'Starbucks Coffee',
+        amount: 12.45,
+        category: 'Dining',
+        cardId: cardId1,
+        date: formatDate(1),
+        source: 'Manual Input'
+      },
+      {
+        id: `tx-demo-3-${Date.now()}`,
+        merchant: 'Uber Rides',
+        amount: 28.50,
+        category: 'Transport',
+        cardId: cardId1,
+        date: formatDate(3),
+        source: 'Bank Import'
+      },
+      {
+        id: `tx-demo-4-${Date.now()}`,
+        merchant: 'Amazon Shopping',
+        amount: 185.00,
+        category: 'Shopping',
+        cardId: cardId1,
+        date: formatDate(4),
+        source: 'Bank Import'
+      },
+      {
+        id: `tx-demo-5-${Date.now()}`,
+        merchant: 'Netflix Subscription',
+        amount: 15.99,
+        category: 'Entertainment',
+        cardId: cardId2,
+        date: formatDate(5),
+        source: 'Manual Input'
+      },
+      {
+        id: `tx-demo-6-${Date.now()}`,
+        merchant: 'Olive Garden Dining',
+        amount: 84.50,
+        category: 'Dining',
+        cardId: cardId2,
+        date: formatDate(6),
+        source: 'Manual Input'
+      },
+      {
+        id: `tx-demo-7-${Date.now()}`,
+        merchant: 'Shell Gasoline',
+        amount: 45.00,
+        category: 'Transport',
+        cardId: cardId2,
+        date: formatDate(7),
+        source: 'Manual Input'
+      },
+      {
+        id: `tx-demo-8-${Date.now()}`,
+        merchant: 'City Water & Power',
+        amount: 135.00,
+        category: 'Utilities',
+        cardId: cardId2,
+        date: formatDate(10),
+        source: 'Bank Import'
+      },
+      {
+        id: `tx-demo-9-${Date.now()}`,
+        merchant: 'Staples Office Supplies',
+        amount: 114.80,
+        category: 'Office',
+        cardId: cardId3,
+        date: formatDate(2),
+        source: 'Bank Import'
+      },
+      {
+        id: `tx-demo-10-${Date.now()}`,
+        merchant: 'Google Workspace Cloud',
+        amount: 50.00,
+        category: 'Software',
+        cardId: cardId3,
+        date: formatDate(5),
+        source: 'Manual Input'
+      },
+      {
+        id: `tx-demo-11-${Date.now()}`,
+        merchant: 'Delta Airlines Travel',
+        amount: 450.00,
+        category: 'Travel',
+        cardId: cardId3,
+        date: formatDate(12),
+        source: 'Bank Import'
+      },
+      {
+        id: `tx-demo-12-${Date.now()}`,
+        merchant: 'Meta Ads Marketing',
+        amount: 300.00,
+        category: 'Marketing',
+        cardId: cardId3,
+        date: formatDate(15),
+        source: 'Manual Input'
+      }
+    ];
+
+    const batch = writeBatch(db);
+    this.writeCount++;
+
+    demoCards.forEach(card => {
+      batch.set(doc(db, 'users', this.currentUid, 'cards', card.id), card);
+    });
+
+    demoTxs.forEach(tx => {
+      batch.set(doc(db, 'users', this.currentUid, 'transactions', tx.id), tx);
+    });
+
+    await batch.commit();
+
+    this.cards.push(...demoCards);
+    this.transactions.push(...demoTxs);
+    this.transactions.sort((a, b) => b.id.localeCompare(a.id));
+
+    this.notifyListeners();
+  }
+
+  // Developer Impersonation Mode: Backup own data and load target user's records (READ-ONLY)
+  async loadInspectedUserState(inspectUid, inspectEmail) {
+    if (!this.isDeveloper) throw new Error("Unauthorized.");
+    
+    // Backup developer state
+    if (!this.inspectionMode) {
+      this._backupCards = [...this.cards];
+      this._backupTransactions = [...this.transactions];
+      this._backupSettings = { ...this.settings };
+    }
+
+    this.inspectionMode = true;
+    this.inspectedUid = inspectUid;
+    this.inspectedEmail = inspectEmail;
+
+    try {
+      this.readCount++;
+      const ref = doc(db, 'users', inspectUid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        this.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+      } else {
+        this.settings = { ...DEFAULT_SETTINGS };
+      }
+
+      this.readCount++;
+      const cardsSnap = await getDocs(collection(db, 'users', inspectUid, 'cards'));
+      this.cards = [];
+      cardsSnap.forEach(doc => {
+        this.cards.push(doc.data());
+      });
+
+      this.readCount++;
+      const txsSnap = await getDocs(collection(db, 'users', inspectUid, 'transactions'));
+      this.transactions = [];
+      txsSnap.forEach(doc => {
+        this.transactions.push(doc.data());
+      });
+
+      this.transactions.sort((a, b) => b.id.localeCompare(a.id));
+      this.notifyListeners();
+    } catch (err) {
+      console.error('Failed to load inspected user state:', err);
+      this.exitInspectedUserState();
+      throw err;
+    }
+  }
+
+  // Restore developer's own backup data
+  exitInspectedUserState() {
+    this.inspectionMode = false;
+    this.inspectedUid = null;
+    this.inspectedEmail = '';
+
+    this.cards = [...this._backupCards];
+    this.transactions = [...this._backupTransactions];
+    this.settings = { ...this._backupSettings };
+
+    this._backupCards = [];
+    this._backupTransactions = [];
+    this._backupSettings = {};
+
+    this.notifyListeners();
   }
 }
 

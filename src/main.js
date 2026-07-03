@@ -2010,6 +2010,34 @@ function initDevTab() {
   btnError?.addEventListener('click', () => {
     toastManager.show('Database Error', 'Simulated Firestore connection drop: [code=unavailable] client offline.', 'warning');
   });
+
+  // 🌱 Seed Demo Data click listener
+  const btnSeed = document.getElementById('btn-seed-demo-data');
+  btnSeed?.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to seed 3 mock credit cards and 12 realistic spending transactions onto this account?')) return;
+    btnSeed.disabled = true;
+    const oldText = btnSeed.textContent;
+    btnSeed.textContent = '🌱 Seeding data...';
+    try {
+      await store.seedDemoData();
+      toastManager.show('Data Seeded', 'Successfully seeded personal and business demo states.', 'success');
+      renderAppUI();
+    } catch (err) {
+      toastManager.show('Seed Failed', err.message || 'Could not seed database.', 'warning');
+    } finally {
+      btnSeed.disabled = false;
+      btnSeed.textContent = oldText;
+    }
+  });
+
+  // 🕵️ Exit Inspect click listener
+  const btnExitInspect = document.getElementById('btn-exit-inspect');
+  btnExitInspect?.addEventListener('click', () => {
+    store.exitInspectedUserState();
+    document.getElementById('admin-inspect-banner')?.classList.add('hidden');
+    toastManager.show('Impersonation Exited', 'Returned to developer session dashboard.', 'info');
+    renderAppUI();
+  });
 }
 
 function updateDevConsoleUI() {
@@ -2056,7 +2084,7 @@ async function loadDeveloperUserDirectory() {
 
   container.innerHTML = `
     <tr>
-      <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-secondary);">
+      <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-secondary);">
         <div class="loading-spinner" style="margin: 0 auto 8px; width: 24px; height: 24px;"></div>
         <div>Retrieving registered users...</div>
       </td>
@@ -2070,7 +2098,7 @@ async function loadDeveloperUserDirectory() {
     if (users.length === 0) {
       container.innerHTML = `
         <tr>
-          <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-secondary);">No user records found in Firestore.</td>
+          <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-secondary);">No user records found in Firestore.</td>
         </tr>
       `;
       return;
@@ -2085,6 +2113,12 @@ async function loadDeveloperUserDirectory() {
       const welcomeSent = settings.welcomeEmailSent ? '✅ Yes' : '❌ No';
       const reportOptIn = settings.monthlyReportEmailOptIn ? '📧 Yes' : '🔕 No';
 
+      // Impersonate (Inspect) option is only accessible to developer whitelist
+      const isSelf = uid === store.currentUid;
+      const actionButtonHtml = isSelf
+        ? '<span style="font-size: 11px; color: var(--text-secondary); font-style: italic;">Active Session</span>'
+        : `<button type="button" class="btn btn-secondary btn-sm btn-inspect-user" data-uid="${uid}" data-email="${escapeHtml(email)}" style="margin: 0; padding: 2px 8px; font-size: 11px;">Inspect</button>`;
+
       return `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;">
           <td style="padding: 12px 8px; font-weight: 500;">${escapeHtml(name)}</td>
@@ -2092,14 +2126,49 @@ async function loadDeveloperUserDirectory() {
           <td style="padding: 12px 8px; font-family: monospace; font-size: 11px; color: var(--text-secondary); word-break: break-all;">${uid}</td>
           <td style="padding: 12px 8px; text-align: center;">${welcomeSent}</td>
           <td style="padding: 12px 8px; text-align: center;">${reportOptIn}</td>
+          <td style="padding: 12px 8px; text-align: center;">${actionButtonHtml}</td>
         </tr>
       `;
     }).join('');
+
+    // Bind inspect user clicks
+    container.querySelectorAll('.btn-inspect-user').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const targetUid = btn.getAttribute('data-uid');
+        const targetEmail = btn.getAttribute('data-email');
+        if (!targetUid) return;
+
+        btn.disabled = true;
+        const oldText = btn.textContent;
+        btn.textContent = '🕵️...';
+
+        try {
+          await store.loadInspectedUserState(targetUid, targetEmail);
+          
+          // Display inspect warning banner
+          const banner = document.getElementById('admin-inspect-banner');
+          const emailDisplay = document.getElementById('admin-inspect-email');
+          if (banner) banner.classList.remove('hidden');
+          if (emailDisplay) emailDisplay.textContent = targetEmail;
+
+          toastManager.show('Inspection Mode Active', `Impersonating state for ${targetEmail}.`, 'success');
+          
+          // Go to dashboard automatically to see their data
+          document.getElementById('btn-nav-dashboard')?.click();
+          renderAppUI();
+        } catch (err) {
+          toastManager.show('Inspection Failed', err.message || 'Could not load user data.', 'warning');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = oldText;
+        }
+      });
+    });
   } catch (err) {
     console.error('Failed to load user directory:', err);
     container.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align: center; padding: 24px; color: var(--danger);">
+        <td colspan="6" style="text-align: center; padding: 24px; color: var(--danger);">
           Failed to fetch user directory. Make sure firestore.rules has been updated to authorize read access.
           <br><small style="font-family: monospace; opacity: 0.8;">${escapeHtml(err.message || '')}</small>
         </td>
