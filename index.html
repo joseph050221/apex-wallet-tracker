@@ -367,13 +367,13 @@
               <!-- Cards Manager Panel -->
               <div class="wallet-left-col glass-panel">
                 <div class="panel-header-with-action">
-                  <h2>My Payment Cards</h2>
+                  <h2 data-i18n="lbl_my_payment_cards">My Payment Cards</h2>
                   <button class="btn btn-secondary btn-sm" id="btn-add-card">
                     <i data-lucide="plus"></i>
-                    <span>Add New Card</span>
+                    <span data-i18n="lbl_add_new_card">Add New Card</span>
                   </button>
                 </div>
-                <p class="panel-desc">Manage the credit and debit cards on your account.</p>
+                <p class="panel-desc" data-i18n="desc_my_payment_cards">Manage the credit and debit cards on your account.</p>
 
                 <div class="wallet-cards-grid" id="wallet-cards-detailed-list">
                   <!-- Card cards dynamically populated -->
@@ -389,13 +389,13 @@
               <!-- Left Chart: Main Trend -->
               <div class="analytics-card glass-panel main-trend-card">
                 <div class="panel-header-with-action">
-                  <h2>Spending Trend</h2>
+                  <h2 data-i18n="lbl_spending_trend">Spending Trend</h2>
                   <div class="btn-group" id="trend-range-group">
-                    <button class="btn btn-secondary btn-sm" data-range="week">Week</button>
-                    <button class="btn btn-secondary btn-sm active" data-range="month">Month</button>
-                    <button class="btn btn-secondary btn-sm" data-range="3months">3M</button>
-                    <button class="btn btn-secondary btn-sm" data-range="6months">6M</button>
-                    <button class="btn btn-secondary btn-sm" data-range="year">Year</button>
+                    <button class="btn btn-secondary btn-sm" data-range="week" data-i18n="range_week">Week</button>
+                    <button class="btn btn-secondary btn-sm active" data-range="month" data-i18n="range_month">Month</button>
+                    <button class="btn btn-secondary btn-sm" data-range="3months" data-i18n="range_3m">3M</button>
+                    <button class="btn btn-secondary btn-sm" data-range="6months" data-i18n="range_6m">6M</button>
+                    <button class="btn btn-secondary btn-sm" data-range="year" data-i18n="range_year">Year</button>
                   </div>
                 </div>
                 <div class="chart-container line-chart-wrapper">
@@ -405,8 +405,8 @@
 
               <!-- Right Chart: Card distribution -->
               <div class="analytics-card glass-panel card-distribution-card">
-                <h2>Card Spending Distribution</h2>
-                <p class="panel-desc">Comparison of total volume charged per card</p>
+                <h2 data-i18n="lbl_card_distribution">Card Spending Distribution</h2>
+                <p class="panel-desc" data-i18n="desc_card_distribution">Comparison of total volume charged per card</p>
                 <div class="chart-container bar-chart-wrapper">
                   <canvas id="chart-card-distribution"></canvas>
                 </div>
@@ -415,8 +415,8 @@
               <!-- Stats & Tables -->
               <div class="analytics-card glass-panel span-2-cols">
                 <div class="col-header">
-                  <h2>Expense Categories Detail</h2>
-                  <p class="panel-desc">In-depth tracking of category allowances and transaction frequencies</p>
+                  <h2 data-i18n="lbl_expense_categories_detail">Expense Categories Detail</h2>
+                  <p class="panel-desc" data-i18n="desc_expense_categories_detail">In-depth tracking of category allowances and transaction frequencies</p>
                 </div>
                 
                 <div class="analytics-table-grid" id="analytics-categories-detailed-grid">
@@ -427,12 +427,12 @@
               <!-- Consolidated Monthly Report -->
               <div class="analytics-card glass-panel span-2-cols">
                 <div class="col-header">
-                  <h2>Monthly Report</h2>
-                  <p class="panel-desc">A single report across every card in view -- not just one statement -- with each transaction attributed to its card.</p>
+                  <h2 data-i18n="profile_report_title">Monthly Report</h2>
+                  <p class="panel-desc" data-i18n="desc_monthly_report_generate">A single report across every card in view -- not just one statement -- with each transaction attributed to its card.</p>
                 </div>
                 <button class="btn btn-primary btn-sm" id="btn-open-report">
                   <i data-lucide="file-text"></i>
-                  <span>Generate Monthly Report</span>
+                  <span data-i18n="btn_generate_report">Generate Monthly Report</span>
                 </button>
               </div>
             </div>
@@ -442,22 +442,21 @@
           <section id="tab-qa" class="tab-panel">
             <div class="qa-layout glass-panel" style="padding: 24px; display: flex; flex-direction: column; height: calc(100vh - 240px); min-height: 500px;">
               <div class="col-header" style="margin-bottom: 16px;">
-                <h2>AI Financial Assistant</h2>
-                <p class="panel-desc">Ask questions about your transactions, budgets, or general financial tips. Powered by Claude.</p>
+                <h2 data-i18n="qa_title">AI Financial Assistant</h2>
+                <p class="panel-desc" data-i18n="qa_desc">Ask questions about your transactions, budgets, or general financial tips. Powered by Claude.</p>
               </div>
 
-              <!-- Chat Viewport -->
               <div id="qa-chat-viewport" style="flex: 1; overflow-y: auto; padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px;">
-                <div class="chat-message assistant" style="align-self: flex-start; max-width: 80%; padding: 12px 16px; border-radius: 12px 12px 12px 0; background: var(--border-color); color: var(--text-main); font-size: 14px;">
+                <div class="chat-message assistant" id="chat-welcome-msg" data-i18n="ai_welcome_message" style="align-self: flex-start; max-width: 80%; padding: 12px 16px; border-radius: 12px 12px 12px 0; background: var(--border-color); color: var(--text-main); font-size: 14px;">
                   Hello! I'm your AI Financial Assistant. Ask me anything about your card spending patterns, budgets, or ways to optimize your finances.
                 </div>
               </div>
 
               <!-- Quick FAQ Chips -->
               <div class="qa-chips" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
-                <button type="button" class="btn btn-secondary btn-xs btn-qa-chip" data-question="How can I optimize my business vs personal spending?">How to optimize personal/business spending?</button>
-                <button type="button" class="btn btn-secondary btn-xs btn-qa-chip" data-question="What category have I spent the most money on this month?">What is my highest category this month?</button>
-                <button type="button" class="btn btn-secondary btn-xs btn-qa-chip" data-question="Give me 3 practical tips to stick to my monthly budget.">3 tips to stick to budget</button>
+                <button type="button" class="btn btn-secondary btn-xs btn-qa-chip" data-question-key="faq_q1" data-i18n="faq_lbl1" data-question="How can I optimize my business vs personal spending?">How to optimize personal/business spending?</button>
+                <button type="button" class="btn btn-secondary btn-xs btn-qa-chip" data-question-key="faq_q2" data-i18n="faq_lbl2" data-question="What category have I spent the most money on this month?">What is my highest category this month?</button>
+                <button type="button" class="btn btn-secondary btn-xs btn-qa-chip" data-question-key="faq_q3" data-i18n="faq_lbl3" data-question="Give me 3 practical tips to stick to my monthly budget.">3 tips to stick to budget</button>
               </div>
 
               <!-- Chat Input Bar -->
@@ -476,30 +475,30 @@
               <!-- Left: System Info & Sandbox -->
               <div class="dev-left-col" style="display: flex; flex-direction: column; gap: 20px;">
                 <div class="col-header">
-                  <h2>Developer Console</h2>
-                  <p class="panel-desc">Behind-the-scenes diagnostics, active parameters, and simulation toolkits.</p>
+                  <h2 data-i18n="nav_dev">Developer Console</h2>
+                  <p class="panel-desc" data-i18n="dev_desc">Behind-the-scenes diagnostics, active parameters, and sandbox testing tools.</p>
                 </div>
-
+                
                 <div class="dev-section" style="padding: 16px; border-radius: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
-                  <h3 style="font-size: 15px; font-weight: 700; margin-top: 0; margin-bottom: 12px; color: var(--accent);">System Diagnostics</h3>
+                  <h3 style="font-size: 15px; font-weight: 700; margin-top: 0; margin-bottom: 12px; color: var(--accent);" data-i18n="dev_system_diagnostics">System Diagnostics</h3>
                   <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px; color: var(--text-secondary);">
-                    <span>Auth Status:</span><strong id="dev-auth-status" style="color:#10b981;">Connected</strong>
-                    <span>Auth User UID:</span><span id="dev-user-uid" style="font-family: monospace; word-break: break-all;">-</span>
-                    <span>Database Reads:</span><strong id="dev-db-reads" style="color:var(--accent);">0</strong>
-                    <span>Database Writes:</span><strong id="dev-db-writes" style="color:var(--accent);">0</strong>
-                    <span>Local Cache Version:</span><span>v2.1 (Sub-collections Layout)</span>
+                    <span data-i18n="dev_auth_status">Auth Status:</span><strong id="dev-auth-status" style="color:#10b981;">Connected</strong>
+                    <span data-i18n="dev_user_uid">Auth User UID:</span><span id="dev-user-uid" style="font-family: monospace; word-break: break-all;">-</span>
+                    <span data-i18n="dev_db_reads">Database Reads:</span><strong id="dev-db-reads" style="color:var(--accent);">0</strong>
+                    <span data-i18n="dev_db_writes">Database Writes:</span><strong id="dev-db-writes" style="color:var(--accent);">0</strong>
+                    <span data-i18n="dev_cache_version">Local Cache Version:</span><span>v2.1 (Sub-collections Layout)</span>
                   </div>
                 </div>
 
                 <div class="dev-section" style="padding: 16px; border-radius: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
-                  <h3 style="font-size: 15px; font-weight: 700; margin-top: 0; margin-bottom: 12px; color: var(--danger);">Sandbox Simulator</h3>
+                  <h3 style="font-size: 15px; font-weight: 700; margin-top: 0; margin-bottom: 12px; color: var(--danger);" data-i18n="dev_sandbox_simulator">Sandbox Simulator</h3>
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-simulate-alert">Test Smart Beep Alert</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-simulate-db-latency">Toggle Network Latency</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-local-state" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.2);">Reset Local State</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-simulate-error">Trigger Mock DB Error</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="btn-seed-demo-data" style="background: linear-gradient(135deg, #10b981, #059669); border: none; font-weight: 700;">🌱 Seed Demo Data</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-purge-demo-data" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.2); font-weight: 700;">🧹 Wipe Database</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-simulate-alert" data-i18n="dev_btn_test_beep">Test Smart Beep Alert</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-simulate-db-latency" data-i18n="dev_btn_toggle_latency">Toggle Network Latency</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-local-state" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.2);" data-i18n="dev_btn_reset_state">Reset Local State</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-simulate-error" data-i18n="dev_btn_trigger_error">Trigger Mock DB Error</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-seed-demo-data" style="background: linear-gradient(135deg, #10b981, #059669); border: none; font-weight: 700;" data-i18n="dev_btn_seed_data">🌱 Seed Demo Data</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-purge-demo-data" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.2); font-weight: 700;" data-i18n="dev_btn_purge_data">🧹 Wipe Database</button>
                   </div>
                 </div>
               </div>
@@ -507,8 +506,8 @@
               <!-- Right: Real-time Database Snapshot View -->
               <div class="dev-right-col" style="display: flex; flex-direction: column; gap: 12px;">
                 <div class="col-header">
-                  <h3>Raw State Snapshot</h3>
-                  <p class="panel-desc">Real-time state data loaded in the browser state memory structure</p>
+                  <h3 data-i18n="dev_raw_snapshot">Raw State Snapshot</h3>
+                  <p class="panel-desc" data-i18n="dev_raw_snapshot_desc">Real-time state data loaded in the browser state memory structure</p>
                 </div>
                 <div class="code-viewport" style="flex: 1; max-height: 400px; overflow-y: auto; background: #000; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
                   <pre id="dev-state-json" style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #38bdf8; word-break: break-all; white-space: pre-wrap;"></pre>
@@ -520,11 +519,11 @@
             <div class="glass-panel" style="padding: 24px;">
               <div class="col-header" style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
                 <div>
-                  <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;">Registered Users & Profiles</h3>
-                  <p class="panel-desc" style="margin: 4px 0 0;">Inspect user settings documents, email report statuses, and registered display names.</p>
+                  <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;" data-i18n="dev_users_title">Registered Users & Profiles</h3>
+                  <p class="panel-desc" style="margin: 4px 0 0;" data-i18n="dev_users_desc">Inspect user settings documents, email report statuses, and registered display names.</p>
                 </div>
                 <div style="font-size: 13px; color: var(--text-secondary);">
-                  Total Users: <strong id="dev-user-count" style="color: var(--accent); font-size: 15px;">—</strong>
+                  <span data-i18n="dev_total_users">Total Users:</span> <strong id="dev-user-count" style="color: var(--accent); font-size: 15px;">—</strong>
                 </div>
               </div>
               
@@ -532,12 +531,12 @@
                 <table class="ledger-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                   <thead>
                     <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">
-                      <th style="padding: 12px 8px;">Display Name</th>
-                      <th style="padding: 12px 8px;">Email Address</th>
-                      <th style="padding: 12px 8px;">User UID</th>
-                      <th style="padding: 12px 8px; text-align: center;">Welcome Sent</th>
-                      <th style="padding: 12px 8px; text-align: center;">Report Opt-In</th>
-                      <th style="padding: 12px 8px; text-align: center;">Actions</th>
+                      <th style="padding: 12px 8px;" data-i18n="th_name">Display Name</th>
+                      <th style="padding: 12px 8px;" data-i18n="auth_email_lbl">Email Address</th>
+                      <th style="padding: 12px 8px;" data-i18n="th_uid">User UID</th>
+                      <th style="padding: 12px 8px; text-align: center;" data-i18n="th_welcome_sent">Welcome Sent</th>
+                      <th style="padding: 12px 8px; text-align: center;" data-i18n="th_report_optin">Report Opt-In</th>
+                      <th style="padding: 12px 8px; text-align: center;" data-i18n="th_actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="dev-user-list-body">
@@ -557,26 +556,25 @@
       <div class="modal-backdrop hidden" id="modal-add-expense">
         <div class="modal-content glass-panel">
           <div class="modal-header">
-            <h3 id="expense-modal-title">Add Expense Manually</h3>
+            <h3 id="expense-modal-title" data-i18n="modal_add_expense_title">Add Expense Manually</h3>
             <button class="btn-close-modal" id="btn-close-expense-modal">
               <i data-lucide="x"></i>
             </button>
           </div>
-          
           <form class="modal-form" id="form-add-expense">
             <div class="form-group">
-              <label for="form-merchant">Merchant Name</label>
+              <label for="form-merchant" data-i18n="modal_lbl_merchant">Merchant Name</label>
               <input type="text" id="form-merchant" required placeholder="e.g. Amazon, Starbucks">
             </div>
 
             <div class="form-group-row">
               <div class="form-group">
-                <label for="form-amount">Amount ($)</label>
+                <label for="form-amount" data-i18n="modal_lbl_amount">Amount ($)</label>
                 <input type="number" step="0.01" min="0.01" id="form-amount" required placeholder="0.00">
               </div>
 
               <div class="form-group">
-                <label for="form-category">Category</label>
+                <label for="form-category" data-i18n="modal_lbl_category">Category</label>
                 <select id="form-category" required>
                   <!-- Filled dynamically by JS -->
                 </select>
@@ -584,20 +582,20 @@
             </div>
 
             <div class="form-group">
-              <label for="form-card">Payment Card</label>
+              <label for="form-card" data-i18n="modal_lbl_card">Payment Card</label>
               <select id="form-card" required>
                 <!-- Filled dynamically by JS -->
               </select>
             </div>
 
             <div class="form-group">
-              <label for="form-date">Transaction Date</label>
+              <label for="form-date" data-i18n="modal_lbl_date">Transaction Date</label>
               <input type="date" id="form-date" required>
             </div>
 
             <div class="form-actions">
-              <button type="button" class="btn btn-secondary" id="btn-cancel-expense-modal">Cancel</button>
-              <button type="submit" class="btn btn-primary" id="btn-save-expense">Save Expense</button>
+              <button type="button" class="btn btn-secondary" id="btn-cancel-expense-modal" data-i18n="modal_btn_cancel">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="btn-save-expense" data-i18n="modal_btn_submit">Save Expense</button>
             </div>
           </form>
         </div>
@@ -607,33 +605,33 @@
       <div class="modal-backdrop hidden" id="modal-import-transactions">
         <div class="modal-content glass-panel">
           <div class="modal-header">
-            <h3>Import Bank Transactions</h3>
+            <h3 data-i18n="import_title">Import Bank Transactions</h3>
             <button class="btn-close-modal" id="btn-close-import-modal">
               <i data-lucide="x"></i>
             </button>
           </div>
 
           <div class="modal-form">
-            <p class="panel-desc">Upload a CSV or PDF bank/credit-card statement. By default, everything is parsed right here in your browser — nothing is uploaded anywhere. We only import expenses (deposits/credits are skipped), and you can remove any row before confirming. If the built-in PDF parser can't read a statement, you can optionally use your own AI API key (set up in Profile &amp; Settings) — only the extracted text is sent, directly to your own AI account.</p>
+            <p class="panel-desc" data-i18n="import_desc">Upload a CSV or PDF bank/credit-card statement. By default, everything is parsed right here in your browser — nothing is uploaded anywhere. We only import expenses (deposits/credits are skipped), and you can remove any row before confirming. If the built-in PDF parser can't read a statement, you can optionally use your own AI API key (set up in Profile &amp; Settings) — only the extracted text is sent, directly to your own AI account.</p>
 
             <div class="form-group">
-              <label for="import-card-select">Which card is this statement for?</label>
+              <label for="import-card-select" data-i18n="import_label_card">Which card is this statement for?</label>
               <select id="import-card-select" required></select>
             </div>
 
             <div class="form-group">
-              <label for="import-file-input">Statement File (.csv or .pdf)</label>
+              <label for="import-file-input" data-i18n="import_label_file">Statement File (.csv or .pdf)</label>
               <input type="file" id="import-file-input" accept=".csv,.pdf">
             </div>
 
             <p class="auth-error-text hidden" id="import-error-text"></p>
             <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-try-ai-import">
-              <i data-lucide="sparkles"></i> Try AI-Powered Parsing
+              <i data-lucide="sparkles"></i> <span data-i18n="import_btn_ai">Try AI-Powered Parsing</span>
             </button>
             <p class="import-status-text hidden" id="import-status-text">Parsing file...</p>
             <p class="import-pdf-warning hidden" id="import-pdf-warning">
               <i data-lucide="alert-triangle"></i>
-              <span id="import-pdf-warning-text">PDF parsing is best-effort — statement layouts vary a lot. Please review the rows below before importing.</span>
+              <span id="import-pdf-warning-text" data-i18n="import_pdf_warning">PDF parsing is best-effort — statement layouts vary a lot. Please review the rows below before importing.</span>
             </p>
 
             <div class="import-preview hidden" id="import-preview">
@@ -642,8 +640,8 @@
             </div>
 
             <div class="form-actions">
-              <button type="button" class="btn btn-secondary" id="btn-cancel-import-modal">Cancel</button>
-              <button type="button" class="btn btn-primary" id="btn-confirm-import" disabled>Import Transactions</button>
+              <button type="button" class="btn btn-secondary" id="btn-cancel-import-modal" data-i18n="modal_btn_cancel">Cancel</button>
+              <button type="button" class="btn btn-primary" id="btn-confirm-import" disabled data-i18n="import_btn_confirm">Import Transactions</button>
             </div>
           </div>
         </div>
@@ -653,33 +651,33 @@
       <div class="modal-backdrop hidden" id="modal-log-payment">
         <div class="modal-content glass-panel">
           <div class="modal-header">
-            <h3>Log a Card Payment</h3>
+            <h3 data-i18n="modal_payment_title">Log a Card Payment</h3>
             <button class="btn-close-modal" id="btn-close-payment-modal">
               <i data-lucide="x"></i>
             </button>
           </div>
 
           <form class="modal-form" id="form-log-payment">
-            <p class="panel-desc">Record a payment you made toward <strong id="payment-card-name">this card</strong>'s bill. This won't change the card's tracked usage — it's just added to your total spending so your monthly numbers reflect real money that left your account.</p>
+            <p class="panel-desc" data-i18n="modal_payment_desc">Record a payment you made toward <strong id="payment-card-name">this card</strong>'s bill. This won't change the card's tracked usage — it's just added to your total spending so your monthly numbers reflect real money that left your account.</p>
 
             <div class="form-group">
-              <label for="payment-amount">Amount ($)</label>
+              <label for="payment-amount" data-i18n="modal_lbl_amount">Amount ($)</label>
               <input type="number" step="0.01" min="0.01" id="payment-amount" required placeholder="0.00">
             </div>
 
             <div class="form-group">
-              <label for="payment-date">Payment Date</label>
+              <label for="payment-date" data-i18n="modal_lbl_date">Payment Date</label>
               <input type="date" id="payment-date" required>
             </div>
 
             <div class="form-group">
-              <label for="payment-note">Note (optional)</label>
+              <label for="payment-note" data-i18n="modal_lbl_note">Note (optional)</label>
               <input type="text" id="payment-note" placeholder="e.g. Monthly statement payment">
             </div>
 
             <div class="form-actions">
-              <button type="button" class="btn btn-secondary" id="btn-cancel-payment-modal">Cancel</button>
-              <button type="submit" class="btn btn-primary">Log Payment</button>
+              <button type="button" class="btn btn-secondary" id="btn-cancel-payment-modal" data-i18n="modal_btn_cancel">Cancel</button>
+              <button type="submit" class="btn btn-primary" data-i18n="modal_btn_log_payment">Log Payment</button>
             </div>
           </form>
         </div>
@@ -689,7 +687,7 @@
       <div class="modal-backdrop hidden" id="modal-report">
         <div class="modal-content modal-content-wide glass-panel" id="report-modal-content">
           <div class="modal-header">
-            <h3>Monthly Report</h3>
+            <h3 data-i18n="profile_report_title">Monthly Report</h3>
             <button class="btn-close-modal" id="btn-close-report-modal">
               <i data-lucide="x"></i>
             </button>
@@ -697,12 +695,12 @@
 
           <div class="report-controls">
             <div class="form-group">
-              <label for="report-month-picker">Month</label>
+              <label for="report-month-picker" data-i18n="lbl_month">Month</label>
               <input type="month" id="report-month-picker">
             </div>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-print-report">
               <i data-lucide="printer"></i>
-              <span>Print / Save as PDF</span>
+              <span data-i18n="btn_print_report">Print / Save as PDF</span>
             </button>
           </div>
 
@@ -714,7 +712,7 @@
       <div class="modal-backdrop hidden" id="modal-add-card">
         <div class="modal-content glass-panel">
           <div class="modal-header">
-            <h3 id="card-modal-title">Add New Payment Card</h3>
+            <h3 id="card-modal-title" data-i18n="modal_card_title">Add New Payment Card</h3>
             <button class="btn-close-modal" id="btn-close-card-modal">
               <i data-lucide="x"></i>
             </button>
@@ -722,13 +720,13 @@
           
           <form class="modal-form" id="form-add-card">
             <div class="form-group">
-              <label for="form-card-name">Card Name / Label</label>
+              <label for="form-card-name" data-i18n="lbl_card_name">Card Name / Label</label>
               <input type="text" id="form-card-name" required placeholder="e.g. Chase Sapphire Reserve, Amex Gold">
             </div>
 
             <div class="form-group-row">
               <div class="form-group">
-                <label for="form-card-brand">Card Issuer Network</label>
+                <label for="form-card-brand" data-i18n="lbl_card_network">Card Issuer Network</label>
                 <select id="form-card-brand" required>
                   <option value="visa">Visa</option>
                   <option value="mastercard">Mastercard</option>
@@ -738,36 +736,27 @@
               </div>
 
               <div class="form-group">
-                <label for="form-card-last4">Last 4 Digits</label>
+                <label for="form-card-last4" data-i18n="lbl_card_last4">Last 4 Digits</label>
                 <input type="text" maxlength="4" minlength="4" pattern="\d{4}" id="form-card-last4" required placeholder="4242">
               </div>
             </div>
 
             <div class="form-group">
-              <label for="form-card-limit">Credit Limit ($)</label>
+              <label for="form-card-limit" data-i18n="lbl_card_limit">Credit Limit ($)</label>
               <input type="number" min="0" step="1" id="form-card-limit" required placeholder="10000">
             </div>
 
             <div class="form-group">
-              <label for="form-card-scope">Expense Type</label>
+              <label for="form-card-scope" data-i18n="lbl_card_expense_type">Expense Type</label>
               <select id="form-card-scope" required>
-                <option value="personal">Personal</option>
-                <option value="business">Business</option>
+                <option value="personal" data-i18n="switcher_personal">Personal</option>
+                <option value="business" data-i18n="switcher_business">Business</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label for="form-card-color">Card Skin Theme</label>
+              <label for="form-card-color" data-i18n="lbl_card_theme">Card Skin Theme</label>
               <select id="form-card-color" required>
-                <option value="card-theme-blue">Deep Blue Metallic (Visa Sapphire Style)</option>
-                <option value="card-theme-gold">Gold Lustre (Amex Gold Style)</option>
-                <option value="card-theme-dark">Obsidian Matte (Amex Platinum Style)</option>
-                <option value="card-theme-purple">Aurora Neon Gradient (Premium Wave)</option>
-                <option value="card-theme-emerald">Emerald Foil (Rich Sage)</option>
-                <option value="card-theme-silver">Platinum Silver (Titanium Apple Style)</option>
-              </select>
-            </div>
-
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="btn-cancel-card-modal">Cancel</button>
               <button type="submit" class="btn btn-primary" id="btn-save-card">Add Card</button>
@@ -818,63 +807,63 @@
             </div>
 
             <div class="profile-section">
-              <h4>Personal Category Budgets</h4>
-              <p class="panel-desc">Used to trigger spending alerts on your personal cards when you're close to or over budget.</p>
+              <h4 data-i18n="profile_personal_budgets">Personal Category Budgets</h4>
+              <p class="panel-desc" data-i18n="profile_personal_budgets_desc">Used to trigger spending alerts on your personal cards when you're close to or over budget.</p>
               <div class="budgets-grid" id="budgets-grid">
                 <!-- JS generated: one input per category -->
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-budgets">Save Budgets</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-budgets" data-i18n="profile_btn_save_budgets">Save Budgets</button>
             </div>
 
             <div class="profile-section">
-              <h4>Business Category Budgets</h4>
-              <p class="panel-desc">Same idea, but for spending on cards tagged Business -- kept separate so a personal Dining budget doesn't get mixed up with a business one.</p>
+              <h4 data-i18n="profile_business_budgets">Business Category Budgets</h4>
+              <p class="panel-desc" data-i18n="profile_business_budgets_desc">Same idea, but for spending on cards tagged Business -- kept separate so a personal Dining budget doesn't get mixed up with a business one.</p>
               <div class="budgets-grid" id="business-budgets-grid">
                 <!-- JS generated: one input per category -->
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-business-budgets">Save Business Budgets</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-business-budgets" data-i18n="profile_btn_save_biz_budgets">Save Business Budgets</button>
             </div>
 
             <div class="profile-section">
-              <h4>AI-Powered PDF Import</h4>
-              <p class="panel-desc">Add your own Anthropic (Claude) API key to let AI read bank statement PDFs the built-in parser can't handle. Your key is stored only on this device — never synced to our servers — and is used to call Anthropic's API directly from your browser, billed to your own account.</p>
-              <p class="panel-desc" id="ai-key-status-text">No key saved yet.</p>
+              <h4 data-i18n="profile_ai_title">AI-Powered PDF Import</h4>
+              <p class="panel-desc" data-i18n="profile_ai_desc">Add your own Anthropic (Claude) API key to let AI read bank statement PDFs the built-in parser can't handle. Your key is stored only on this device — never synced to our servers — and is used to call Anthropic's API directly from your browser, billed to your own account.</p>
+              <p class="panel-desc" id="ai-key-status-text" data-i18n="ai_key_none">No key saved yet.</p>
               <div class="form-group">
-                <label for="input-ai-api-key">Anthropic API Key</label>
+                <label for="input-ai-api-key" data-i18n="profile_ai_label">Anthropic API Key</label>
                 <input type="password" id="input-ai-api-key" placeholder="sk-ant-...">
               </div>
               <div class="inline-btn-group">
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-save-ai-key">Save Key</button>
-                <button type="button" class="btn btn-danger-outline btn-sm" id="btn-clear-ai-key">Remove Key</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-save-ai-key" data-i18n="profile_btn_save_ai">Save Key</button>
+                <button type="button" class="btn btn-danger-outline btn-sm" id="btn-clear-ai-key" data-i18n="profile_btn_clear_ai">Remove Key</button>
               </div>
-              <p class="panel-desc">Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Usage is billed by Anthropic directly to you — typically a fraction of a cent per statement.</p>
+              <p class="panel-desc" data-i18n="profile_ai_link_desc">Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Usage is billed by Anthropic directly to you — typically a fraction of a cent per statement.</p>
             </div>
 
             <div class="profile-section">
-              <h4>Notifications</h4>
-              <p class="panel-desc" id="notification-status-text">Checking permission...</p>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-enable-notifications">Enable Desktop Notifications</button>
+              <h4 data-i18n="profile_notifications_title">Notifications</h4>
+              <p class="panel-desc" id="notification-status-text" data-i18n="notif_checking">Checking permission...</p>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-enable-notifications" data-i18n="profile_btn_notifications">Enable Desktop Notifications</button>
             </div>
 
             <div class="profile-section">
-              <h4>Monthly Email Report</h4>
-              <p class="panel-desc">Get a consolidated report across all your cards emailed to you automatically at the start of each month.</p>
+              <h4 data-i18n="profile_report_title">Monthly Email Report</h4>
+              <p class="panel-desc" data-i18n="profile_report_desc">Get a consolidated report across all your cards emailed to you automatically at the start of each month.</p>
               <label class="toggle-switch">
                 <input type="checkbox" id="chk-monthly-report-optin">
                 <span class="toggle-slider"></span>
-                <span class="toggle-label">Email me my monthly report</span>
+                <span class="toggle-label" data-i18n="profile_chk_report">Email me my monthly report</span>
               </label>
             </div>
 
             <div class="profile-section danger-zone">
-              <h4>Danger Zone</h4>
-              <p class="panel-desc">Permanently delete your account and all associated cards and transactions. This cannot be undone.</p>
-              <button type="button" class="btn btn-danger-outline btn-sm" id="btn-delete-account">Delete Account</button>
+              <h4 data-i18n="profile_danger_title">Danger Zone</h4>
+              <p class="panel-desc" data-i18n="profile_danger_desc">Permanently delete your account and all associated cards and transactions. This cannot be undone.</p>
+              <button type="button" class="btn btn-danger-outline btn-sm" id="btn-delete-account" data-i18n="profile_btn_delete">Delete Account</button>
             </div>
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn btn-secondary" id="btn-signout-from-profile">Log Out</button>
+            <button type="button" class="btn btn-secondary" id="btn-signout-from-profile" data-i18n="profile_btn_logout">Log Out</button>
           </div>
         </div>
       </div>

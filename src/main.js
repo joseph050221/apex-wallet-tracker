@@ -683,18 +683,22 @@ function renderCategoryProgressList(metrics) {
   });
 }
 
-// Render My Cards tab management list
 function renderWalletTabDetails(cards) {
   const container = document.getElementById('wallet-cards-detailed-list');
   if (!container) return;
 
   container.innerHTML = '';
 
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
   if (cards.length === 0) {
+    const emptyTitle = dict.wallet_empty_title || "No cards yet";
+    const emptySub = dict.wallet_empty_subtitle || "Add a payment card to start tracking monthly expenditures.";
     container.innerHTML = `
       <div style="border: 1px dashed var(--border-color); border-radius: 12px; padding: 40px 20px; text-align:center; color: var(--text-secondary);">
-        <h3>No cards yet</h3>
-        <p style="font-size:12px; margin-top:8px;">Add a payment card to start tracking monthly expenditures.</p>
+        <h3>${escapeHtml(emptyTitle)}</h3>
+        <p style="font-size:12px; margin-top:8px;">${escapeHtml(emptySub)}</p>
       </div>
     `;
     return;
@@ -707,6 +711,15 @@ function renderWalletTabDetails(cards) {
     const limitPct = card.limit > 0 ? ((card.balance / card.limit) * 100) : 0;
     const usageColor = limitPct >= 90 ? 'var(--danger)' : limitPct >= 75 ? '#f59e0b' : 'var(--accent)';
 
+    const spentLbl = dict.lbl_spent || 'Spent';
+    const limitLbl = dict.lbl_limit || 'Limit';
+    const uncappedLbl = dict.lbl_uncapped || 'Uncapped';
+    const businessLbl = dict.switcher_business || 'Business';
+
+    const tooltipLog = dict.tooltip_log_payment || 'Log a Payment';
+    const tooltipEdit = dict.tooltip_edit_card || 'Edit Card';
+    const tooltipDelete = dict.tooltip_remove_card || 'Remove Card';
+
     item.innerHTML = `
       <div class="card-manage-visual ${card.color}">
         <span class="mini-network">${escapeHtml(card.brand.toUpperCase())}</span>
@@ -714,10 +727,10 @@ function renderWalletTabDetails(cards) {
       </div>
 
       <div class="card-manage-info">
-        <span class="card-manage-title">${escapeHtml(card.name)}${card.scope === 'business' ? ' <span class="scope-badge business">Business</span>' : ''}</span>
+        <span class="card-manage-title">${escapeHtml(card.name)}${card.scope === 'business' ? ` <span class="scope-badge business">${escapeHtml(businessLbl)}</span>` : ''}</span>
         <div class="card-manage-meta">
-          <span>Spent: <strong class="card-manage-spend">$${card.balance.toFixed(2)}</strong></span>
-          ${card.limit > 0 ? `<span>Limit: $${card.limit.toLocaleString()} (${limitPct.toFixed(0)}%)</span>` : '<span>Limit: Uncapped</span>'}
+          <span>${escapeHtml(spentLbl)}: <strong class="card-manage-spend">$${card.balance.toFixed(2)}</strong></span>
+          ${card.limit > 0 ? `<span>${escapeHtml(limitLbl)}: $${card.limit.toLocaleString()} (${limitPct.toFixed(0)}%)</span>` : `<span>${escapeHtml(limitLbl)}: ${escapeHtml(uncappedLbl)}</span>`}
         </div>
         ${card.limit > 0 ? `
           <div class="card-usage-bar-bg">
@@ -727,13 +740,13 @@ function renderWalletTabDetails(cards) {
       </div>
 
       <div class="card-manage-actions">
-        <button class="btn-icon-edit btn-log-payment" data-id="${card.id}" title="Log a Payment">
+        <button class="btn-icon-edit btn-log-payment" data-id="${card.id}" title="${escapeHtml(tooltipLog)}">
           <i data-lucide="banknote"></i>
         </button>
-        <button class="btn-icon-edit btn-edit-card" data-id="${card.id}" title="Edit Card">
+        <button class="btn-icon-edit btn-edit-card" data-id="${card.id}" title="${escapeHtml(tooltipEdit)}">
           <i data-lucide="pencil"></i>
         </button>
-        <button class="btn-icon-danger btn-delete-card" data-id="${card.id}" title="Remove Card">
+        <button class="btn-icon-danger btn-delete-card" data-id="${card.id}" title="${escapeHtml(tooltipDelete)}">
           <i data-lucide="trash-2"></i>
         </button>
       </div>
@@ -751,9 +764,13 @@ function renderWalletTabDetails(cards) {
 
     // Bind Delete Card button
     item.querySelector('.btn-delete-card').addEventListener('click', () => {
-      if (confirm(`Are you sure you want to remove card "${card.name}" from your tracker? Transactions will be unlinked but retained.`)) {
+      const confirmDeleteTpl = dict.confirm_delete_card || "Are you sure you want to remove card \"{name}\" from your tracker? Transactions will be unlinked but retained.";
+      const confirmMsg = confirmDeleteTpl.replace('{name}', card.name);
+      if (confirm(confirmMsg)) {
         store.deleteCard(card.id);
-        toastManager.show('Card Deleted', `Removed ${card.name}`, 'info');
+        const cardDeletedTitle = lang === 'zh' ? '卡片已删除' : (lang === 'fr' ? 'Carte supprimée' : 'Card Deleted');
+        const cardDeletedBody = (lang === 'zh' ? '已移除卡片 {name}' : (lang === 'fr' ? 'Carte {name} retirée' : 'Removed {name}')).replace('{name}', card.name);
+        toastManager.show(cardDeletedTitle, cardDeletedBody, 'info');
         renderAppUI();
       }
     });
@@ -935,17 +952,20 @@ function openExpenseModal(tx = null) {
   const title = document.getElementById('expense-modal-title');
   const saveBtn = document.getElementById('btn-save-expense');
 
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
   if (tx) {
-    title.textContent = 'Edit Expense';
-    saveBtn.textContent = 'Save Changes';
+    title.textContent = dict.modal_edit_title || 'Edit Expense';
+    saveBtn.textContent = dict.modal_btn_save || 'Save Changes';
     document.getElementById('form-merchant').value = tx.merchant;
     document.getElementById('form-amount').value = tx.amount;
     document.getElementById('form-category').value = tx.category;
     if (tx.cardId) document.getElementById('form-card').value = tx.cardId;
     document.getElementById('form-date').value = tx.date;
   } else {
-    title.textContent = 'Add Expense Manually';
-    saveBtn.textContent = 'Save Expense';
+    title.textContent = dict.modal_add_title || 'Add Expense Manually';
+    saveBtn.textContent = dict.modal_btn_submit || 'Save Expense';
     document.getElementById('form-add-expense').reset();
     document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
   }
@@ -963,9 +983,12 @@ function openCardModal(card = null) {
   const title = document.getElementById('card-modal-title');
   const saveBtn = document.getElementById('btn-save-card');
 
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
   if (card) {
-    title.textContent = 'Edit Payment Card';
-    saveBtn.textContent = 'Save Changes';
+    title.textContent = dict.card_modal_edit_title || 'Edit Payment Card';
+    saveBtn.textContent = dict.card_modal_btn_save || 'Save Changes';
     document.getElementById('form-card-name').value = card.name;
     document.getElementById('form-card-brand').value = card.brand;
     document.getElementById('form-card-last4').value = card.last4;
@@ -973,8 +996,8 @@ function openCardModal(card = null) {
     document.getElementById('form-card-scope').value = card.scope || 'personal';
     document.getElementById('form-card-color').value = card.color;
   } else {
-    title.textContent = 'Add New Payment Card';
-    saveBtn.textContent = 'Add Card';
+    title.textContent = dict.card_modal_add_title || 'Add New Payment Card';
+    saveBtn.textContent = dict.card_modal_btn_submit || 'Add Card';
     document.getElementById('form-add-card').reset();
     document.getElementById('form-card-limit').value = 10000;
     // Default to the currently active scope filter, if a specific one is selected
@@ -1303,7 +1326,7 @@ function populateBudgetsGrid(containerId, budgets, inputPrefix) {
 
   container.innerHTML = [...CATEGORIES, ...store.customCategories].map(cat => `
     <div class="form-group">
-      <label for="${inputPrefix}-${cat}">${getCategoryLabel(cat)}</label>
+      <label for="${inputPrefix}-${cat}">${getTranslatedCategoryLabel(cat)}</label>
       <input type="number" min="0" step="1" id="${inputPrefix}-${cat}" value="${budgets[cat] || 0}">
     </div>
   `).join('');
@@ -1320,10 +1343,17 @@ function openProfileModal() {
 
   document.getElementById('profile-email').textContent = currentAuthUser.email || '';
 
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
   const createdAt = currentAuthUser.metadata?.creationTime;
-  document.getElementById('profile-joined').textContent = createdAt
-    ? `Member since ${new Date(createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
-    : '';
+  if (createdAt) {
+    const joinedLabel = dict.profile_joined || 'Member since';
+    const formattedDate = new Date(createdAt).toLocaleDateString(lang === 'zh' ? 'zh-CN' : (lang === 'fr' ? 'fr-FR' : 'en-US'), { month: 'long', year: 'numeric' });
+    document.getElementById('profile-joined').textContent = `${joinedLabel} ${formattedDate}`;
+  } else {
+    document.getElementById('profile-joined').textContent = '';
+  }
 
   // Populate Display Name field
   const nameInput = document.getElementById('profile-name-input');
@@ -1337,9 +1367,10 @@ function openProfileModal() {
   document.getElementById('chk-monthly-report-optin').checked = !!store.settings.monthlyReportEmailOptIn;
 
   document.getElementById('input-ai-api-key').value = '';
-  document.getElementById('ai-key-status-text').textContent = getAiApiKey()
-    ? 'A key is currently saved on this device.'
-    : 'No key saved yet.';
+  const hasKey = !!getAiApiKey();
+  document.getElementById('ai-key-status-text').textContent = hasKey
+    ? (dict.ai_key_saved || 'A key is currently saved on this device.')
+    : (dict.ai_key_none || 'No key saved yet.');
 
   document.getElementById('modal-profile').classList.remove('hidden');
 }
@@ -1349,20 +1380,23 @@ function updateNotificationStatusUI() {
   const enableBtn = document.getElementById('btn-enable-notifications');
   if (!statusText || !enableBtn) return;
 
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
   if (!('Notification' in window)) {
-    statusText.textContent = 'Desktop notifications are not supported in this browser.';
+    statusText.textContent = dict.notif_unsupported || 'Desktop notifications are not supported in this browser.';
     enableBtn.classList.add('hidden');
     return;
   }
 
   if (Notification.permission === 'granted') {
-    statusText.textContent = 'Desktop notifications are enabled for spending alerts.';
+    statusText.textContent = dict.notif_granted || 'Desktop notifications are enabled for spending alerts.';
     enableBtn.classList.add('hidden');
   } else if (Notification.permission === 'denied') {
-    statusText.textContent = 'Notifications are blocked. Enable them in your browser\'s site settings.';
+    statusText.textContent = dict.notif_denied || 'Notifications are blocked. Enable them in your browser\'s site settings.';
     enableBtn.classList.add('hidden');
   } else {
-    statusText.textContent = 'Enable desktop notifications to get notified about spending alerts.';
+    statusText.textContent = dict.notif_default || 'Enable desktop notifications to get notified about spending alerts.';
     enableBtn.classList.remove('hidden');
   }
 }
@@ -1450,35 +1484,47 @@ function initProfileModal() {
 
   document.getElementById('btn-save-ai-key')?.addEventListener('click', () => {
     const val = document.getElementById('input-ai-api-key').value.trim();
+    const lang = store.settings.language || 'en';
+    const dict = translations[lang] || translations['en'];
+
     if (!val) {
-      toastManager.show('No Key Entered', 'Paste an API key first.', 'warning');
+      toastManager.show(dict.toast_no_key_title || 'No Key Entered', dict.toast_no_key_body || 'Paste an API key first.', 'warning');
       return;
     }
     setAiApiKey(val);
     document.getElementById('input-ai-api-key').value = '';
-    document.getElementById('ai-key-status-text').textContent = 'A key is currently saved on this device.';
-    toastManager.show('Key Saved', 'Your API key is saved on this device only.', 'success');
+    document.getElementById('ai-key-status-text').textContent = dict.ai_key_saved || 'A key is currently saved on this device.';
+    toastManager.show(dict.toast_key_saved_title || 'Key Saved', dict.toast_key_saved_body || 'Your API key is saved on this device only.', 'success');
   });
 
   document.getElementById('btn-clear-ai-key')?.addEventListener('click', () => {
+    const lang = store.settings.language || 'en';
+    const dict = translations[lang] || translations['en'];
+
     setAiApiKey('');
     document.getElementById('input-ai-api-key').value = '';
-    document.getElementById('ai-key-status-text').textContent = 'No key saved yet.';
-    toastManager.show('Key Removed', 'Your API key has been removed from this device.', 'info');
+    document.getElementById('ai-key-status-text').textContent = dict.ai_key_none || 'No key saved yet.';
+    toastManager.show(dict.toast_key_removed_title || 'Key Removed', dict.toast_key_removed_body || 'Your API key has been removed from this device.', 'info');
   });
 
   document.getElementById('chk-monthly-report-optin')?.addEventListener('change', (e) => {
+    const lang = store.settings.language || 'en';
+    const dict = translations[lang] || translations['en'];
+
     store.updateSettings({ monthlyReportEmailOptIn: e.target.checked });
     toastManager.show(
-      'Preference Saved',
-      e.target.checked ? 'You\'ll receive a monthly report by email.' : 'Monthly email reports turned off.',
+      dict.toast_report_pref_title || 'Preference Saved',
+      e.target.checked ? (dict.toast_report_pref_optin || "You'll receive a monthly report by email.") : (dict.toast_report_pref_optout || 'Monthly email reports turned off.'),
       'info'
     );
   });
 
   document.getElementById('btn-signout-from-profile')?.addEventListener('click', (e) => {
     e.preventDefault();
-    if (confirm('Are you sure you want to log out?')) {
+    const lang = store.settings.language || 'en';
+    const dict = translations[lang] || translations['en'];
+    const confirmMsg = dict.logout_confirm || 'Are you sure you want to log out?';
+    if (confirm(confirmMsg)) {
       signOutUser();
     }
   });
@@ -1655,7 +1701,10 @@ function bindSidebarToggle() {
 function bindLogoutButton() {
   document.getElementById('btn-logout')?.addEventListener('click', (e) => {
     e.preventDefault();
-    if (confirm('Are you sure you want to log out?')) {
+    const lang = store.settings.language || 'en';
+    const dict = translations[lang] || translations['en'];
+    const confirmMsg = dict.logout_confirm || 'Are you sure you want to log out?';
+    if (confirm(confirmMsg)) {
       signOutUser();
     }
   });
@@ -2003,6 +2052,9 @@ function initQaTab() {
     const question = input.value.trim();
     if (!question) return;
 
+    const lang = store.settings.language || 'en';
+    const dict = translations[lang] || translations['en'];
+
     // Append user message to log
     const userMsg = document.createElement('div');
     userMsg.className = 'chat-message user';
@@ -2030,7 +2082,7 @@ function initQaTab() {
     thinkingMsg.style.color = 'var(--text-muted)';
     thinkingMsg.style.fontSize = '14px';
     thinkingMsg.style.fontStyle = 'italic';
-    thinkingMsg.textContent = 'Thinking...';
+    thinkingMsg.textContent = dict.ai_thinking || 'Thinking...';
     viewport.appendChild(thinkingMsg);
     viewport.scrollTop = viewport.scrollHeight;
 
@@ -2039,7 +2091,7 @@ function initQaTab() {
       thinkingMsg.classList.remove('thinking');
       thinkingMsg.style.fontStyle = 'normal';
       thinkingMsg.style.color = 'var(--danger)';
-      thinkingMsg.textContent = 'An Anthropic API key is required. Please save your API key in Profile & Settings first.';
+      thinkingMsg.textContent = dict.ai_key_required || 'An Anthropic API key is required. Please save your API key in Profile & Settings first.';
       return;
     }
 
@@ -2071,6 +2123,7 @@ App Feature Guide:
 5. "Analytics": Spending Trend graphs (Week, Month, 3M, 6M, Year), Card distribution graphs, category totals, and Monthly PDF generation.
 6. "Monthly email reports": opt-in from settings to get automated PDF report emails.
 
+Important active language: The user's active language choice is ${lang}. You MUST respond directly to the user's question in this language (English, French, or Mandarin).
 Rule: Keep your responses highly concise, practical, and structured. Do not use markdown code fences. Respond directly to the user's question.`;
 
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -2092,10 +2145,10 @@ Rule: Keep your responses highly concise, practical, and structured. Do not use 
 
       if (!res.ok) {
         if (res.status === 401) {
-          throw new Error('Your API key was rejected. Please check your Anthropic API key in Profile & Settings.');
+          throw new Error(lang === 'zh' ? '您的 API 密钥已被拒绝。请检查个人设置中的 Anthropic 密钥。' : (lang === 'fr' ? 'Votre clé API a été rejetée. Veuillez vérifier votre clé Anthropic.' : 'Your API key was rejected. Please check your Anthropic API key in Profile & Settings.'));
         }
         if (res.status === 429) {
-          throw new Error('Rate limited by Anthropic. Please wait a moment and try again.');
+          throw new Error(lang === 'zh' ? '访问过于频繁，已被 Anthropic 限流。请稍后再试。' : (lang === 'fr' ? 'Limite de taux dépassée. Veuillez réessayer dans un instant.' : 'Rate limited by Anthropic. Please wait a moment and try again.'));
         }
         throw new Error(`AI request failed (status ${res.status}).`);
       }
@@ -2119,7 +2172,10 @@ Rule: Keep your responses highly concise, practical, and structured. Do not use 
 
   document.querySelectorAll('.btn-qa-chip').forEach(btn => {
     btn.addEventListener('click', () => {
-      const q = btn.getAttribute('data-question');
+      const key = btn.getAttribute('data-question-key');
+      const lang = store.settings.language || 'en';
+      const dict = translations[lang] || translations['en'];
+      const q = (key && dict[key]) ? dict[key] : btn.getAttribute('data-question');
       if (input) {
         input.value = q;
         form?.dispatchEvent(new Event('submit'));
@@ -2262,11 +2318,15 @@ async function loadDeveloperUserDirectory() {
   const countEl = document.getElementById('dev-user-count');
   if (!container) return;
 
+  const lang = store.settings.language || 'en';
+  const dict = translations[lang] || translations['en'];
+
+  const loadingMsg = dict.loading_users || 'Retrieving registered users...';
   container.innerHTML = `
     <tr>
       <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-secondary);">
         <div class="loading-spinner" style="margin: 0 auto 8px; width: 24px; height: 24px;"></div>
-        <div>Retrieving registered users...</div>
+        <div>${escapeHtml(loadingMsg)}</div>
       </td>
     </tr>
   `;
@@ -2276,9 +2336,10 @@ async function loadDeveloperUserDirectory() {
     if (countEl) countEl.textContent = users.length;
 
     if (users.length === 0) {
+      const emptyMsg = dict.dev_no_users || 'No user records found in Firestore.';
       container.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-secondary);">No user records found in Firestore.</td>
+          <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-secondary);">${escapeHtml(emptyMsg)}</td>
         </tr>
       `;
       return;
@@ -2287,17 +2348,19 @@ async function loadDeveloperUserDirectory() {
     // Render user profile rows
     container.innerHTML = users.map(user => {
       const settings = user.settings || {};
-      const name = settings.fullName || '<Not Configured>';
+      const name = settings.fullName || (dict.dev_not_configured || '<Not Configured>');
       const email = user.userEmail || '<Google Auth / No Email>';
       const uid = user.uid;
-      const welcomeSent = settings.welcomeEmailSent ? '✅ Yes' : '❌ No';
-      const reportOptIn = settings.monthlyReportEmailOptIn ? '📧 Yes' : '🔕 No';
+      const yesLbl = lang === 'zh' ? '是' : (lang === 'fr' ? 'Oui' : 'Yes');
+      const noLbl = lang === 'zh' ? '否' : (lang === 'fr' ? 'Non' : 'No');
+      const welcomeSent = settings.welcomeEmailSent ? `✅ ${yesLbl}` : `❌ ${noLbl}`;
+      const reportOptIn = settings.monthlyReportEmailOptIn ? `📧 ${yesLbl}` : `🔕 ${noLbl}`;
 
       // Impersonate (Inspect) option is only accessible to developer whitelist
       const isSelf = uid === store.currentUid;
       const actionButtonHtml = isSelf
-        ? '<span style="font-size: 11px; color: var(--text-secondary); font-style: italic;">Active Session</span>'
-        : `<button type="button" class="btn btn-secondary btn-sm btn-inspect-user" data-uid="${uid}" data-email="${escapeHtml(email)}" style="margin: 0; padding: 2px 8px; font-size: 11px;">Inspect</button>`;
+        ? `<span style="font-size: 11px; color: var(--text-secondary); font-style: italic;">${escapeHtml(dict.dev_active_session || 'Active Session')}</span>`
+        : `<button type="button" class="btn btn-secondary btn-sm btn-inspect-user" data-uid="${uid}" data-email="${escapeHtml(email)}" style="margin: 0; padding: 2px 8px; font-size: 11px;">${escapeHtml(dict.dev_inspect || 'Inspect')}</button>`;
 
       return `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;">
